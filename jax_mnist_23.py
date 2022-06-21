@@ -51,21 +51,21 @@ Most variables overriden in part before main code part!!!
 
 '''Set your file directorys'''
 
-#googledrive_path = "/content/drive/MyDrive/Colab Notebooks/Jax_MNist/"
-local_path = "data/Mnist_handwritten_digits"
+googledrive_path="/content/drive/MyDrive/Colab Notebooks/Jax_MNist/"
+local_path="C:/Users/Flo/Documents/Uni/Masterarbeit/Hanabi/Mnist handwritten digits/"
 
 
 
 
 
 '''number of training epochs for Network2'''
-n_training_epochs = 3 #number of training epochs for every NN2.
+n_training_epochs = 3 #number of training epochs for every NN2.  
 n_offsp_epoch = 10 #number of training and testing runs combined, to get an average for the performance of the Convu net.
 n_testing_epochs = 3 # number of testing runs, per n_offsp_epoch
 
 '''parameter Network2'''
 n_samples = 150  #Number of training samples for NN2, distribution of data for 600: [68, 59, 66, 67, 47, 46, 65, 71, 53, 58])
-n_test = 1000 #Number of test samples for NN2. Needs to be multiples of batch_size_test=500 )
+n_test=1000 #Number of test samples for NN2. Needs to be multiples of batch_size_test=500 )
 batch_size = 50 # for precise n_samples number must be: n_samples%batch_size_train=0
 
 learning_rate = 0.1
@@ -81,40 +81,40 @@ std_modifier=0.05
 
 
 '''number of offsprings per metaepoch'''
-n_offsprings = 100
+n_offsprings=100
 '''number of metaopochs'''
-n_metaepochs = 10
+n_metaepochs=10
 
 
-NNin1 = 2500 #dependent on Convu
-NNout1 = 10
+NNin1=2500 #dependent on Convu
+NNout1=10
 
 
 
 '''Convunet'''
-Convu1_in = 1
-Convu2_in = 12
-Convu3_in = 24
-seed_convu = 0
+Convu1_in=1
+Convu2_in=12
+Convu3_in=24
+seed_convu=0
 
-n_samples = 150  # number of training samples
+n_samples=150 #number of training samples
 batch_size = 50
-n_test = 1000
-n_training_epochs = 3
-print_distribution_data = False
-std_modifier = 0.05
+n_test=1000
+n_training_epochs=3
+print_distribution_data=False
+std_modifier=0.05
 
 
-Convu1_in = 32
-Convu2_in = 16
-Convu3_in = 4
-kernelsize_ = (3, 3)
+Convu1_in=32
+Convu2_in=16
+Convu3_in=4
+kernelsize_=(3,3)
 
 
 
-use_sigma_decay = True
-sigma_start = 1.0
-sigma_goal = 0.1
+use_sigma_decay=True
+sigma_start=1.0
+sigma_goal=0.1
 
 '''logging to screen variables'''
 print_offsprings=True
@@ -583,9 +583,9 @@ Elitist_top_n=10
 n_elitist_offsprings=50
 
 '''Train multiple Google Colabs in parallel'''
-use_paralleltraining=True
-#parallel_path="/content/drive/MyDrive/Colab Notebooks/Jax_MNist/Logs/24.04_parallel/"
-parallel_path = "data/parallel"
+use_paralleltraining= False
+parallel_path="/content/drive/MyDrive/Colab Notebooks/Jax_MNist/Logs/24.04_parallel/"
+      
 
 
 n_metaepochs=1000
@@ -694,7 +694,7 @@ for meta in range (n_metaepochs):
                 offspring_list[0]=father_weights
               best_performer[0]=highest_acc
 
-    elif meta == 0 :
+    elif meta ==0 :
         if use_pickle:
             with open(pickle_path, "rb") as input_file:
               father_weights = cPickle.load(input_file)
