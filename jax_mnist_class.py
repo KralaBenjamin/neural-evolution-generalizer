@@ -175,7 +175,7 @@ def pathandstuff():
 
 
 def logg_script(file_name, save_path):
-  source=f"/content/drive/MyDrive/Colab Notebooks/{file_name}"
+  source= f"/content/drive/MyDrive/Colab Notebooks/{file_name}"
   destination=save_path+f"{file_name}.ipynb"
   shutil.copy2(source, destination)
 
@@ -512,7 +512,7 @@ testing_cat_means=[]
 
 '''Initialize Logging'''
 pathandstuff()
-logg_script(file_name, save_path)
+#logg_script(file_name, save_path)
 log_variables()
 
 
