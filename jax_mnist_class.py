@@ -46,16 +46,18 @@ from jax import random
 import matplotlib.pyplot as plt
 from torchvision import transforms
 from itertools import cycle
-
-from google.colab import drive
-drive.mount('/content/drive')
+from time import strftime, localtime
 
 '''Global Variables'''
 
 
 '''Set file directorys'''
 
-googledrive_path="/content/drive/MyDrive/Colab Notebooks/Jax_Generalizer/Logs/23.06.2022_14.03/"
+
+
+dir_name = strftime("%Y%m%d-%H%M%S")
+local_path = s.path.realpath(f"./{dir_name}/Logs")
+os.makedirs(local_path)
 
 Convu1_in=16
 Convu2_in=24
@@ -147,9 +149,8 @@ def pathandstuff():
     global save_path
 
   
-    if os.path.exists(googledrive_path):
-        print("on google")
-        base_path=googledrive_path
+    if os.path.exists(local_path):
+        base_path=local_path
     else:
         raise ValueError('Please specify save path or connect to Google Drive')
         
