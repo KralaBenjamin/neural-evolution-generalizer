@@ -56,7 +56,7 @@ from time import strftime, localtime
 
 
 dir_name = strftime("%Y%m%d-%H%M%S")
-local_path = s.path.realpath(f"./{dir_name}/Logs")
+local_path = os.path.realpath(f"./{dir_name}/Logs")
 os.makedirs(local_path)
 
 Convu1_in=16
