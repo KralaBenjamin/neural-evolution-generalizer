@@ -491,7 +491,7 @@ pickle_path="/content/drive/MyDrive/Colab Notebooks/Jax_Generalizer/Logs/23.06.2
 use_father=True
 
 '''Load all best weights from log directory'''
-use_all_pickle=True
+use_all_pickle=False
 all_pickle_path="/content/drive/MyDrive/Colab Notebooks/Jax_Generalizer/Logs/23.06.2022_14.03/Logs/24.06.2022_10.22/"
 all_pickle_children=10 #number of offsprings per pickle
 
