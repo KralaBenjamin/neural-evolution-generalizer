@@ -26,6 +26,7 @@ from jax.example_libraries.stax import Dense, Relu, LogSoftmax
 from sklearn.model_selection import train_test_split
 from jax import random, value_and_grad
 import haiku as hk
+from math import isnan
 
 
 #Needs Cleaning
@@ -462,7 +463,15 @@ def jax_create_offsprings(key,n_offspr,  fath_weights,std_modifier):
 
 '''softmax for offspring list for approach 2
     checked 11.04 working correctly'''
-def softmax_offlist(off_list,acc_list,temp):
+def softmax_offlist(off_list, acc_list, temp):
+
+    '''Creates softmax/temp list out of accuracy list [0.2,0.3,....,0.8]'''
+    def softmax_result(results,temp: float):
+        x = [z/temp for z in results]
+        """Compute softmax values for each sets of scores in x."""
+        e_x = np.exp(x - np.max(x))
+        return e_x / e_x.sum()
+
     softmax_list=softmax_result(acc_list,temp)
     for i in range(len(off_list)):
         if i==0:
@@ -473,12 +482,6 @@ def softmax_offlist(off_list,acc_list,temp):
     return top_dog
 
 
-'''Creates softmax/temp list out of accuracy list [0.2,0.3,....,0.8]'''
-def softmax_result(results,temp: float):
-    x = [z/temp for z in results]
-    """Compute softmax values for each sets of scores in x."""
-    e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum()
 
 def sigma_decay(start, end, n_iter):
     return(end/start)**(1/n_iter)
@@ -756,6 +759,8 @@ for meta in range (n_metaepochs):
               best_performer[0]=highest_acc
 
     """
+
+
     if meta ==0 :
         if use_pickle:
             with open(pickle_path, "rb") as input_file:
@@ -765,7 +770,7 @@ for meta in range (n_metaepochs):
             if use_father:
                 offspring_list[0]=father_weights
         
-
+        #wo wird der beste Klassifier ausgewählt?
         else:
             father_weights = conv_init(father_key, (batch_size,28,28,1))
             father_weights = father_weights[1] ## Weights are actually stored in second element of two value tuple
@@ -868,3 +873,12 @@ for meta in range (n_metaepochs):
     #logg("\tMetaepoch max performer: {:.4f}, min performer: {:.4f}".format(np.max(np.array([x[0] for x in result_list_metaepoch])),np.min(np.array([x[0] for x in result_list_metaepoch]))))
     #logg("\tTime per metaepoch:{:.1f}s\n".format(time.time() - start_meta))
     results_meta.append(np.mean(np.array(result_list_metaepoch), axis=0))
+
+    max_meta = max([x[0] for x in result_list_metaepoch])
+    result_list_metaepoch2 = list()
+    for x in result_list_metaepoch:
+        if isnan(x[0]):
+            result_list_metaepoch2.append((0.0, x[1]))
+        else:
+            result_list_metaepoch2.append((1 - x[0]/max_meta, x[1]))
+    result_list_metaepoch = result_list_metaepoch2
