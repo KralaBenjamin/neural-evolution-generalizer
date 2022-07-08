@@ -26,7 +26,7 @@ from jax.example_libraries.stax import Dense, Relu, LogSoftmax
 from sklearn.model_selection import train_test_split
 from jax import random, value_and_grad
 import haiku as hk
-from math import isnan
+from math import isnan, isinf
 
 
 #Needs Cleaning
@@ -876,7 +876,7 @@ for meta in range (n_metaepochs):
     max_meta = max([x[0] for x in result_list_metaepoch])
     result_list_metaepoch2 = list()
     for result_one in result_list_metaepoch:
-        if isnan(result_one[0]):
+        if isnan(result_one[0]) or isinf(result_one[0]):
             result_list_metaepoch2.append((-1.0, result_one[1]))
         else:
             result_list_metaepoch2.append((1 - result_one[0]/max_meta, result_one[1]))
