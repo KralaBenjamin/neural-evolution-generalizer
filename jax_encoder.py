@@ -844,8 +844,6 @@ for meta in range (n_metaepochs):
     #print(f"\tTime overhead: {(time.time()-start_meta):.2f}s")
     
     for i in range(len(offspring_list)):
-        print(i, end="\r")
-
         conv_weights=offspring_list[i]
         
         '''
@@ -856,6 +854,7 @@ for meta in range (n_metaepochs):
         result_off = train_encoder(conv_weights, rng_MLP, x_train, x_test, 5)
         result_off = float(result_off)
         result_list_metaepoch.append((float(result_off), 0.0))
+        print(i, result_off)
 
 
         '''Check for best performer'''
@@ -876,9 +875,10 @@ for meta in range (n_metaepochs):
 
     max_meta = max([x[0] for x in result_list_metaepoch])
     result_list_metaepoch2 = list()
-    for x in result_list_metaepoch:
-        if isnan(x[0]):
-            result_list_metaepoch2.append((0.0, x[1]))
+    for result_one in result_list_metaepoch:
+        if isnan(result_one[0]):
+            result_list_metaepoch2.append((0.0, result_one[1]))
         else:
-            result_list_metaepoch2.append((1 - x[0]/max_meta, x[1]))
+            result_list_metaepoch2.append((1 - result_one[0]/max_meta, result_one[1]))
+    #raise SystemError()
     result_list_metaepoch = result_list_metaepoch2
