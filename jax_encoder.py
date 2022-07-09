@@ -310,13 +310,13 @@ x = np.concatenate((train_dataset_EMNIST.data,
                     test_dataset_EMNIST.data,
                     train_dataset_KMNIST.data,
                     test_dataset_KMNIST.data
-                    ))
+                )).astype(np.float32)
 
 y= np.concatenate((train_dataset_EMNIST.targets,
                    test_dataset_EMNIST.targets,
                    train_dataset_KMNIST.targets,
                    test_dataset_KMNIST.targets
-                   ))
+                   )).astype(np.float32)
 
 print("Number of different classes:", len(list(set(list(np.array(y))))))
 
