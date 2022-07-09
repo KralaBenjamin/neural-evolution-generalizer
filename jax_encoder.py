@@ -27,7 +27,8 @@ from sklearn.model_selection import train_test_split
 from jax import random, value_and_grad
 import haiku as hk
 from math import isnan, isinf
-
+from torch.utils.tensorboard import SummaryWriter
+from statistics import mean, stdev
 
 #Needs Cleaning
 
@@ -712,6 +713,8 @@ pathandstuff()
 #logg_script(file_name, save_path)
 log_variables()
 
+summary_writer = SummaryWriter()
+
 for meta in range (n_metaepochs):
     start_meta = time.time()
 
@@ -854,7 +857,8 @@ for meta in range (n_metaepochs):
         result_off = train_encoder(conv_weights, rng_MLP, x_train, x_test, 5)
         result_off = float(result_off)
         result_list_metaepoch.append((float(result_off), 0.0))
-        print(i, result_off)
+        #print(i, result_off)
+        summary_writer.add_scalar('training/loss',  result_off, n_metaepochs * meta + i)
 
 
         '''Check for best performer'''
@@ -865,20 +869,35 @@ for meta in range (n_metaepochs):
             with open(save_path+f"best_weight_{result_off:.4f}.pkl", 'wb') as f:
                 pickle.dump(best_weights, f, pickle.HIGHEST_PROTOCOL)
                 f.close()
+
             logg(f"New best performer mean: {best_performer:.4f}")#, std: {best_performer[1]:.2f}")
         
-        
+    
+
     #logg("\tMetaepoch mean: {:.4f}, std: {:.2f}".format(np.mean(np.array([x[0] for x in result_list_metaepoch])),np.std(np.array([x[0] for x in result_list_metaepoch]))))
     #logg("\tMetaepoch max performer: {:.4f}, min performer: {:.4f}".format(np.max(np.array([x[0] for x in result_list_metaepoch])),np.min(np.array([x[0] for x in result_list_metaepoch]))))
     #logg("\tTime per metaepoch:{:.1f}s\n".format(time.time() - start_meta))
     results_meta.append(np.mean(np.array(result_list_metaepoch), axis=0))
 
     max_meta = max([x[0] for x in result_list_metaepoch])
+    min_meta = min([x[0] for x in result_list_metaepoch])
+    mean_meta = mean([x[0] for x in result_list_metaepoch])
+    std_meta = stdev([x[0] for x in result_list_metaepoch])
+    summary_writer.add_scalar("meta/max", max_meta, meta)
+    summary_writer.add_scalar("meta/min", min_meta, meta)
+    summary_writer.add_scalar("meta/mean", mean_meta, meta)
+    summary_writer.add_scalar("meta/std", std_meta, meta)
+
+
     result_list_metaepoch2 = list()
     for result_one in result_list_metaepoch:
         if isnan(result_one[0]) or isinf(result_one[0]):
             result_list_metaepoch2.append((-10.0, result_one[1]))
         else:
-            result_list_metaepoch2.append((1 - result_one[0]/max_meta, result_one[1]))
+            result_list_metaepoch2.append(
+                ( (1 - result_one[0]/max_meta) * 10, result_one[1])
+                )
     #raise SystemError()
     result_list_metaepoch = result_list_metaepoch2
+
+summary_writer.close()
