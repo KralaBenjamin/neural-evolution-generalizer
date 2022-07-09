@@ -887,6 +887,8 @@ for meta in range (n_metaepochs):
     summary_writer.add_scalar("meta/min", min_meta, meta)
     summary_writer.add_scalar("meta/mean", mean_meta, meta)
     summary_writer.add_scalar("meta/std", std_meta, meta)
+    print("=" * 20)
+    print(max_meta, min_meta, mean_meta, std_meta)
 
 
     result_list_metaepoch2 = list()
