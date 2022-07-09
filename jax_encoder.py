@@ -12,6 +12,7 @@ from torchvision.datasets import KMNIST
 from torchvision.datasets import CIFAR100
 from torchvision.datasets import EMNIST
 from torchvision.datasets import FashionMNIST
+from torchvision import transforms
 from torch.utils.data import DataLoader
 from jax.example_libraries import stax, optimizers
 import torchvision
