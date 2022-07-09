@@ -879,10 +879,12 @@ for meta in range (n_metaepochs):
     #logg("\tTime per metaepoch:{:.1f}s\n".format(time.time() - start_meta))
     results_meta.append(np.mean(np.array(result_list_metaepoch), axis=0))
 
-    max_meta = max([x[0] for x in result_list_metaepoch])
-    min_meta = min([x[0] for x in result_list_metaepoch])
-    mean_meta = mean([x[0] for x in result_list_metaepoch])
-    std_meta = stdev([x[0] for x in result_list_metaepoch])
+    def __is_worthy_data__(y):
+        return not (isnan(y) or isinf(y))
+    max_meta = max([x[0] for x in result_list_metaepoch if __is_worthy_data__(x[0])])
+    min_meta = min([x[0] for x in result_list_metaepoch if __is_worthy_data__(x[0])])
+    mean_meta = mean([x[0] for x in result_list_metaepoch if __is_worthy_data__(x[0])])
+    std_meta = stdev([x[0] for x in result_list_metaepoch if __is_worthy_data__(x[0])])
     summary_writer.add_scalar("meta/max", max_meta, meta)
     summary_writer.add_scalar("meta/min", min_meta, meta)
     summary_writer.add_scalar("meta/mean", mean_meta, meta)
