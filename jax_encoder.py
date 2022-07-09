@@ -9,6 +9,9 @@ from jax import jit, vmap, pmap, grad, value_and_grad
 import random
 from torchvision.datasets import MNIST
 from torchvision.datasets import KMNIST
+from torchvision.datasets import CIFAR100
+from torchvision.datasets import EMNIST
+from torchvision.datasets import FashionMNIST
 from torch.utils.data import DataLoader
 from jax.example_libraries import stax, optimizers
 import torchvision
@@ -28,7 +31,7 @@ from jax import random, value_and_grad
 import haiku as hk
 from math import isnan, isinf
 from torch.utils.tensorboard import SummaryWriter
-from statistics import mean, stdev
+from statistics import mean, stdev, median
 
 #Needs Cleaning
 
@@ -251,7 +254,7 @@ def logg (string_, array=None):
         file1.close()
         print(string_, array)
         
-
+"""
 train_dataset = MNIST(root='train_mnist', train=True, download=True,transform=torchvision.transforms.Compose([
                                             torchvision.transforms.ToTensor(),
                                             torchvision.transforms.Normalize((0.1307,), (0.3081,))]))
@@ -265,7 +268,56 @@ y= np.concatenate((train_dataset.targets,test_dataset.targets))
 
 x = jnp.array(x,dtype="float32").reshape(len(x), -1)
 y = jnp.array(y)
+"""
 
+
+
+data_image_size=28
+data_image_depth=1
+
+train_dataset_EMNIST = EMNIST(root='train_emnist', train=True, download=True,split="balanced", transform=torchvision.transforms.Compose([
+                                            torchvision.transforms.ToTensor(),
+                                            transforms.Normalize((0.1307,), (0.3081,))
+                                            ]))
+
+test_dataset_EMNIST = EMNIST(root='test_emnist', train=False, download=True,split="balanced",transform=torchvision.transforms.Compose([
+                                           torchvision.transforms.ToTensor(),
+                                           transforms.Normalize((0.1307,), (0.3081,))
+                                           ]))
+
+train_dataset_KMNIST = KMNIST(root='train_kmnist', train=True, download=True,transform=torchvision.transforms.Compose([
+                                            torchvision.transforms.ToTensor(),
+                                            transforms.Normalize((0.1307,), (0.3081,))
+                                            ]))
+
+test_dataset_KMNIST = KMNIST(root='test_kmnist', train=False, download=True,transform=torchvision.transforms.Compose([
+                                           torchvision.transforms.ToTensor(),
+                                           transforms.Normalize((0.1307,), (0.3081,))
+                                           ]))
+
+'''Relabel KMNIST to avoid overlaps'''
+map_dic = dict(zip([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [47,48,49,50,51,52,53,54,55,56]))
+train_dataset_KMNIST.targets = np.vectorize(map_dic.get)(np.array(train_dataset_KMNIST.targets))
+train_dataset_KMNIST.targets = t = torch.from_numpy(train_dataset_KMNIST.targets)
+
+
+test_dataset_KMNIST.targets = np.vectorize(map_dic.get)(np.array(test_dataset_KMNIST.targets))
+test_dataset_KMNIST.targets = t = torch.from_numpy(test_dataset_KMNIST.targets)
+
+
+x = np.concatenate((train_dataset_EMNIST.data,
+                    test_dataset_EMNIST.data,
+                    train_dataset_KMNIST.data,
+                    test_dataset_KMNIST.data
+                    ))
+
+y= np.concatenate((train_dataset_EMNIST.targets,
+                   test_dataset_EMNIST.targets,
+                   train_dataset_KMNIST.targets,
+                   test_dataset_KMNIST.targets
+                   ))
+
+print("Number of different classes:", len(list(set(list(np.array(y))))))
 
 def init_MLP(layer_widths, parent_key, scale=0.01):
 
@@ -858,7 +910,7 @@ for meta in range (n_metaepochs):
         result_off = float(result_off)
         result_list_metaepoch.append((float(result_off), 0.0))
         #print(i, result_off)
-        summary_writer.add_scalar('training/loss',  result_off, n_metaepochs * meta + i)
+        summary_writer.add_scalar('training/loss',  result_off, len(offspring_list) * meta + i)
 
 
         '''Check for best performer'''
@@ -885,12 +937,16 @@ for meta in range (n_metaepochs):
     min_meta = min([x[0] for x in result_list_metaepoch if __is_worthy_data__(x[0])])
     mean_meta = mean([x[0] for x in result_list_metaepoch if __is_worthy_data__(x[0])])
     std_meta = stdev([x[0] for x in result_list_metaepoch if __is_worthy_data__(x[0])])
+    median_meta = median([x[0] for x in result_list_metaepoch if __is_worthy_data__(x[0])])
+
     summary_writer.add_scalar("meta/max", max_meta, meta)
     summary_writer.add_scalar("meta/min", min_meta, meta)
     summary_writer.add_scalar("meta/mean", mean_meta, meta)
     summary_writer.add_scalar("meta/std", std_meta, meta)
+    summary_writer.add_scalar("meta/median", median_meta, meta)
+
     print("=" * 20)
-    print(max_meta, min_meta, mean_meta, std_meta)
+    print(max_meta, min_meta, mean_meta, std_meta, median_meta)
 
 
     result_list_metaepoch2 = list()
@@ -899,7 +955,7 @@ for meta in range (n_metaepochs):
             result_list_metaepoch2.append((-10.0, result_one[1]))
         else:
             result_list_metaepoch2.append(
-                ( (1 - result_one[0]/max_meta) * 10, result_one[1])
+                ( (1 - result_one[0]/max_meta) * 100, result_one[1])
                 )
     #raise SystemError()
     result_list_metaepoch = result_list_metaepoch2
