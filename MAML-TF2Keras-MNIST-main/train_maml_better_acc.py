@@ -81,18 +81,20 @@ kmnist_ts = kmnist_ts.apply(lambda ds: ds.map(lambda x, y: (x, y + 60)))
                                    with_info=False,)
 
 
-kmnist_tr = kmnist_tr.apply(lambda ds: ds.map(
-        lambda x, y: 
-            (tf.reshape(x, [1, 28, 28, 1]), y)
-        ))
-kmnist_ts = kmnist_ts.apply(lambda ds: ds.map(
-        lambda x, y: 
-            (tf.reshape(x, [1, 28, 28, 1]), y)
-        ))
 
 kmnist_tr = kmnist_tr.concatenate(emnist_tr).shuffle(100000)
 kmnist_ts = kmnist_ts.concatenate(emnist_ts).shuffle(100000)
 
+
+
+kmnist_tr_ns = kmnist_tr.apply(lambda ds: ds.map(
+        lambda x, y: 
+            (tf.reshape(x, [1, 28, 28, 1]), y)
+        ))
+kmnist_ts_ns = kmnist_ts.apply(lambda ds: ds.map(
+        lambda x, y: 
+            (tf.reshape(x, [1, 28, 28, 1]), y)
+        ))
 
 out_of_distro_classes_list = [60, 61, 5, 14, 17]
 out_of_distro_tr = dict()
@@ -106,11 +108,11 @@ in_of_distro_tr = dict()
 
 #collects all classes for out_of_distro_tr
 for ofd in out_of_distro_classes_list:
-    out_of_distro_tr[ofd] = kmnist_tr.filter(lambda x, y: int(y) == ofd)
+    out_of_distro_tr[ofd] = kmnist_tr_ns.filter(lambda x, y: int(y) == ofd)
 
 #collects all classes for out_of_distro_ts
 for ofd in out_of_distro_classes_list:
-    out_of_distro_ts[ofd] = kmnist_ts.filter(lambda x, y: int(y) == ofd)
+    out_of_distro_ts[ofd] = kmnist_ts_ns.filter(lambda x, y: int(y) == ofd)
 
     
 # collects all opposite classes for in_of_distro_tr
@@ -176,7 +178,7 @@ def eval_model(mode_binary_classifier):
 
         list_pred_classes = list()
         list_true_classes = list()
-        for i, (x, y) in enumerate(kmnist_ts):
+        for i, (x, y) in enumerate(kmnist_ts_ns):
             if i > 100:
                 break
             predictions = list()
@@ -232,7 +234,7 @@ def eval_model(mode_binary_classifier):
         list_pred_classes = list()
         list_true_classes = list()
 
-        for i, (x, y) in enumerate(kmnist_ts):
+        for i, (x, y) in enumerate(kmnist_ts_ns):
             if i > 100:
                 break
 
