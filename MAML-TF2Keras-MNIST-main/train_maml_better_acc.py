@@ -8,6 +8,7 @@ from random import shuffle
 
 from torch.utils.tensorboard import SummaryWriter
 from collections import Counter
+import time
 
 inner_lr = 1E-5
 outter_lr = 1E-5
@@ -17,6 +18,8 @@ inner_task_loop_no = 64 # give 32 tasks of 2ways-1shot
 opt_inner = tfa.optimizers.NovoGrad(inner_lr)
 opt_outter = tfa.optimizers.NovoGrad(outter_lr, clipnorm=1.)
 #for meaning of the modes check here https://scikit-learn.org/stable/modules/multiclass.html
+n_first_training = 3
+n_second_training = 3
 
 
 # opt_inner = tfa.optimizers.RectifiedAdam(inner_lr)
@@ -163,12 +166,12 @@ def eval_model(mode_binary_classifier):
             training_elements = list()
 
             for i, (x, _) in enumerate(out_of_distro_tr[ofd]):
-                if i >= 3:
+                if i >= n_first_training:
                     break
                 training_elements.append((x, tf.ones([1,1])))
 
             for i, (x, _) in enumerate(in_of_distro_tr[ofd]):
-                if i >= 3:
+                if i >= n_second_training:
                     break
                 training_elements.append((x, tf.zeros([1, 1])))
 
@@ -211,12 +214,12 @@ def eval_model(mode_binary_classifier):
                 training_elements = list()
 
                 for i, (x, _) in enumerate(out_of_distro_tr[ofd_outer]):
-                    if i >= 3:
+                    if i >= n_first_training:
                         break
                     training_elements.append((x, tf.ones([1,1])))
 
                 for i, (x, _) in enumerate(in_of_distro_tr[ofd_inner]):
-                    if i >= 3:
+                    if i >= n_second_training:
                         break
                     training_elements.append((x, tf.zeros([1, 1])))
 
@@ -266,7 +269,7 @@ def eval_model(mode_binary_classifier):
     return accuracy
 
         
-summary_writer = SummaryWriter(log_dir="test")
+summary_writer = SummaryWriter(log_dir=f"run/{time.time()}_{n_first_training=}_{n_second_training=}")
 for step in range(50000):
     # keep the original weights for meta-training
     meta_weights = [tf.Variable(target_weights) for target_weights in cnn_model.trainable_weights]
