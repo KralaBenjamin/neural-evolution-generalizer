@@ -442,7 +442,7 @@ def bootstrapp_offspring_MLP(key,conv_weights, batch_affe, labelaffe,test_images
   
   
     MLP_params = init_MLP([NNin1, NNout1], key)
-    MLP_params_trained=jit_train(conv_weights, batch_affe, labelaffe,MLP_params )
+    MLP_params_trained=train(conv_weights, batch_affe, labelaffe,MLP_params )
     #train(conv_weights, imgs = batch_affe, lbls = labelaffe ,MLP_params = init_MLP )
     
     result=jit_accuracy(conv_weights,MLP_params_trained,test_images,test_lbls)
@@ -909,7 +909,7 @@ for meta in range (n_metaepochs):
         result_off2=[float(jnp.mean(result_off)),float(jnp.std(result_off))]
         
         '''
-        if use_autoencoder == True:
+        if use_autoencoder:
             result_off = train_encoder(conv_weights, rng_MLP, x_train, x_test, 5)
             result_off = float(result_off)
             result_list_metaepoch.append((float(result_off), 0.0))
