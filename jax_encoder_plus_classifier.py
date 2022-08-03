@@ -933,8 +933,10 @@ for meta in range (n_metaepochs):
             result_off2=[float(jnp.mean(result_off)),float(jnp.std(result_off))]
             result_list_metaepoch.append(result_off2)
             breakpoint()
-            summary_writer.add_scalar('training-classifier/accuracy',  
-                                    np.array(result_off), len(offspring_list) * meta + i)
+            summary_writer.add_scalar('training-classifier/accuracy-mean',  
+                                    np.array(result_off2[0]), len(offspring_list) * meta + i)
+            summary_writer.add_scalar('training-classifier/accuracy-std',  
+                                    np.array(result_off2[1]), len(offspring_list) * meta + i)
 
             '''Check for best performer'''
             if result_off2[0] > best_performer[0]:
