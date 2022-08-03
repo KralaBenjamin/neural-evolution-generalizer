@@ -899,7 +899,7 @@ for meta in range (n_metaepochs):
     print("\tLänge Offspring List:",len(offspring_list))
     #print(f"\tTime overhead: {(time.time()-start_meta):.2f}s")
 
-    use_autoencoder = meta % 5 == 0 #train autoencoder every 5th epoch
+    use_autoencoder = meta % 5 == 0 and meta > 0 #train autoencoder every 5th epoch
     
     for i in range(len(offspring_list)):
         conv_weights=offspring_list[i]
@@ -910,6 +910,7 @@ for meta in range (n_metaepochs):
         
         '''
         if use_autoencoder:
+            print('its ae time')
             result_off = train_encoder(conv_weights, rng_MLP, x_train, x_test, 5)
             result_off = float(result_off)
             result_list_metaepoch.append((float(result_off), 0.0))
@@ -931,15 +932,15 @@ for meta in range (n_metaepochs):
             result_off=jit_vmap_bootstrapp_offspring_MLP(rng_MLP,conv_weights,x_train,y_train,x_test,y_test)
             result_off2=[float(jnp.mean(result_off)),float(jnp.std(result_off))]
             result_list_metaepoch.append(result_off2)
-
+            breakpoint()
             summary_writer.add_scalar('training-classifier/accuracy',  
                                     np.array(result_off), len(offspring_list) * meta + i)
 
             '''Check for best performer'''
-            if result_off2[0]>best_performer[0]:
-                best_performer=result_off2
-                best_weights=conv_weights
-                common_start_acc=result_off2[0]
+            if result_off2[0] > best_performer[0]:
+                best_performer = result_off2
+                best_weights = conv_weights
+                common_start_acc = result_off2[0]
                 with open(save_path+f"best_weight_{result_off2[0]:.4f}.pkl", 'wb') as f:
                     pickle.dump(best_weights, f, pickle.HIGHEST_PROTOCOL)
                 f.close()
