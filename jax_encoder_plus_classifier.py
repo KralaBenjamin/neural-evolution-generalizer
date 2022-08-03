@@ -938,8 +938,8 @@ for meta in range (n_metaepochs):
                                     np.array(result_off2[1]), len(offspring_list) * meta + i)
 
             '''Check for best performer'''
-            if result_off2[0] > best_performer[0]:
-                best_performer = result_off2
+            if result_off2[0] > best_performer:
+                best_performer = result_off2[0]
                 best_weights = conv_weights
                 common_start_acc = result_off2[0]
                 with open(save_path+f"best_weight_{result_off2[0]:.4f}.pkl", 'wb') as f:
