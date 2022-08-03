@@ -991,6 +991,6 @@ for meta in range (n_metaepochs):
                 result_list_metaepoch2.append(
                     ( (1 - result_one[0]/max_meta) * 100, result_one[1])
                     )
-    result_list_metaepoch = result_list_metaepoch2
+        result_list_metaepoch = result_list_metaepoch2
 
 summary_writer.close()
