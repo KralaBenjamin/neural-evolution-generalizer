@@ -937,6 +937,7 @@ for meta in range (n_metaepochs):
             summary_writer.add_scalar('training-classifier/accuracy-std',  
                                     np.array(result_off2[1]), len(offspring_list) * meta + i)
 
+
             '''Check for best performer'''
             if result_off2[0] > best_performer:
                 best_performer = result_off2[0]
