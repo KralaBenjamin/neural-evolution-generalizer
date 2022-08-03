@@ -927,21 +927,22 @@ for meta in range (n_metaepochs):
                     f.close()
 
                 logg(f"New best performer mean: {best_performer:.4f}")#, std: {best_performer[1]:.2f}")
-            else:
-                result_off=jit_vmap_bootstrapp_offspring_MLP(rng_MLP,conv_weights,x_train,y_train,x_test,y_test)
-                result_off2=[float(jnp.mean(result_off)),float(jnp.std(result_off))]
-                result_list_metaepoch.append(result_off2)
+        else:
+            result_off=jit_vmap_bootstrapp_offspring_MLP(rng_MLP,conv_weights,x_train,y_train,x_test,y_test)
+            result_off2=[float(jnp.mean(result_off)),float(jnp.std(result_off))]
+            result_list_metaepoch.append(result_off2)
 
-                summary_writer.add_scalar('training-classifier/accuracy',  result_off, len(offspring_list) * meta + i)
+            summary_writer.add_scalar('training-classifier/accuracy',  
+                                    np.array(result_off), len(offspring_list) * meta + i)
 
-                '''Check for best performer'''
-                if result_off2[0]>best_performer[0]:
-                    best_performer=result_off2
-                    best_weights=conv_weights
-                    common_start_acc=result_off2[0]
-                    with open(save_path+f"best_weight_{result_off2[0]:.4f}.pkl", 'wb') as f:
-                        pickle.dump(best_weights, f, pickle.HIGHEST_PROTOCOL)
-                    f.close()
+            '''Check for best performer'''
+            if result_off2[0]>best_performer[0]:
+                best_performer=result_off2
+                best_weights=conv_weights
+                common_start_acc=result_off2[0]
+                with open(save_path+f"best_weight_{result_off2[0]:.4f}.pkl", 'wb') as f:
+                    pickle.dump(best_weights, f, pickle.HIGHEST_PROTOCOL)
+                f.close()
                         
     
 
