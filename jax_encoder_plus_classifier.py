@@ -755,7 +755,8 @@ f_idx=0
 focus_layer=focus_layer*100
 rng_MLP=jax.random.PRNGKey(MLP_key)
 results_meta=[]
-best_performer=10**100
+best_performer_ae=10**100
+best_performer_class = 0.0
 father_key=jax.random.PRNGKey(starting_key)
 best_weights=conv_init(father_key, (batch_size,28,28,1))[1]
 common_start_acc=0
@@ -921,15 +922,15 @@ for meta in range (n_metaepochs):
 
 
             '''Check for best performer'''
-            if result_off<best_performer:
-                best_performer=result_off
+            if result_off<best_performer_ae:
+                best_performer_ae=result_off
                 best_weights=conv_weights
                 common_start_acc=result_off
                 with open(save_path+f"best_weight_{result_off:.4f}.pkl", 'wb') as f:
                     pickle.dump(best_weights, f, pickle.HIGHEST_PROTOCOL)
                     f.close()
 
-                logg(f"New best performer mean: {best_performer:.4f}")#, std: {best_performer[1]:.2f}")
+                logg(f"New best performer mean: {best_performer_ae:.4f}")#, std: {best_performer[1]:.2f}")
         else:
             result_off=jit_vmap_bootstrapp_offspring_MLP(rng_MLP,conv_weights,x_train,y_train,x_test,y_test)
             result_off2=[float(jnp.mean(result_off)),float(jnp.std(result_off))]
@@ -941,8 +942,8 @@ for meta in range (n_metaepochs):
 
 
             '''Check for best performer'''
-            if result_off2[0] > best_performer:
-                best_performer = result_off2[0]
+            if result_off2[0] > best_performer_class:
+                best_performer_class = result_off2[0]
                 best_weights = conv_weights
                 common_start_acc = result_off2[0]
                 with open(save_path+f"best_weight_{result_off2[0]:.4f}.pkl", 'wb') as f:
