@@ -900,6 +900,9 @@ for meta in range (n_metaepochs):
     #print(f"\tTime overhead: {(time.time()-start_meta):.2f}s")
 
     use_autoencoder = meta % 5 == 0 and meta > 0 #train autoencoder every 5th epoch
+    if use_autoencoder:
+        print('its ae time')
+
     
     for i in range(len(offspring_list)):
         conv_weights=offspring_list[i]
@@ -910,7 +913,6 @@ for meta in range (n_metaepochs):
         
         '''
         if use_autoencoder:
-            print('its ae time')
             result_off = train_encoder(conv_weights, rng_MLP, x_train, x_test, 5)
             result_off = float(result_off)
             result_list_metaepoch.append((float(result_off), 0.0))
