@@ -66,6 +66,10 @@ pass
 kmnist_tr = kmnist_tr.apply(lambda ds: ds.map(lambda x, y: (x, y + 60)))
 kmnist_ts = kmnist_ts.apply(lambda ds: ds.map(lambda x, y: (x, y + 60)))
 
+##todo: filter einbauen
+
+
+
 (emnist_tr, emnist_ts) = tfds.load('emnist', 
                                    split=['train','test'],
                                    shuffle_files=True,
@@ -74,6 +78,21 @@ kmnist_ts = kmnist_ts.apply(lambda ds: ds.map(lambda x, y: (x, y + 60)))
 
 kmnist_tr = kmnist_tr.concatenate(emnist_tr).shuffle(100000)
 kmnist_ts = kmnist_ts.concatenate(emnist_ts).shuffle(100000)
+
+
+def out_of_distro_classes(x,y):
+    i_y = int(y)
+    return y == 60 or  y == 61 or y == 5 or y == 14 or y == 17
+in_of_distro_classes = lambda x, y: not out_of_distro_classes(x, y)
+
+kmnist_tr_out_of_distro_classes = kmnist_tr.filter(out_of_distro_classes)
+kminst_tr_in_of_distro_classes = kmnist_tr.filter(in_of_distro_classes)
+
+
+kmnist_ts_out_of_distro_classes = kmnist_ts.filter(out_of_distro_classes)
+#kminst_ts_in_of_distro_classes = kmnist_ts.filter(in_of_distro_classes)
+
+
 
 
 
@@ -97,6 +116,9 @@ loss_inner_task = lambda: tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits
 
 def eval_model():
     
+
+    ## multiclass binäre Operatoren
+
     which_class = 5
     potenzielle_chars = list()
     nicht_potenzielle_chars = list()
