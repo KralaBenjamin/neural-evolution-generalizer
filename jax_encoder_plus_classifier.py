@@ -932,7 +932,6 @@ for meta in range (n_metaepochs):
             result_off=jit_vmap_bootstrapp_offspring_MLP(rng_MLP,conv_weights,x_train,y_train,x_test,y_test)
             result_off2=[float(jnp.mean(result_off)),float(jnp.std(result_off))]
             result_list_metaepoch.append(result_off2)
-            breakpoint()
             summary_writer.add_scalar('training-classifier/accuracy-mean',  
                                     np.array(result_off2[0]), len(offspring_list) * meta + i)
             summary_writer.add_scalar('training-classifier/accuracy-std',  
