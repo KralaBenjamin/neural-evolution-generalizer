@@ -900,7 +900,7 @@ for meta in range (n_metaepochs):
     print("\tLänge Offspring List:",len(offspring_list))
     #print(f"\tTime overhead: {(time.time()-start_meta):.2f}s")
 
-    use_autoencoder = meta % 5 == 0 and meta > 0 #train autoencoder every 5th epoch
+    use_autoencoder = meta % 10 == 0 and meta > 0 #train autoencoder every 10th epoch
     if use_autoencoder:
         print('its ae time')
 
