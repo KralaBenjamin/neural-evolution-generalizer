@@ -46,16 +46,18 @@ from jax import random
 import matplotlib.pyplot as plt
 from torchvision import transforms
 from itertools import cycle
-
-from google.colab import drive
-drive.mount('/content/drive')
+from time import strftime, localtime
 
 '''Global Variables'''
 
 
 '''Set file directorys'''
 
-googledrive_path="/content/drive/MyDrive/Colab Notebooks/Jax_Generalizer/Logs/23.06.2022_14.03/"
+
+
+dir_name = strftime("%Y%m%d-%H%M%S")
+local_path = os.path.realpath(f"./{dir_name}/Logs")
+os.makedirs(local_path)
 
 Convu1_in=16
 Convu2_in=24
@@ -147,9 +149,8 @@ def pathandstuff():
     global save_path
 
   
-    if os.path.exists(googledrive_path):
-        print("on google")
-        base_path=googledrive_path
+    if os.path.exists(local_path):
+        base_path=local_path
     else:
         raise ValueError('Please specify save path or connect to Google Drive')
         
@@ -174,7 +175,7 @@ def pathandstuff():
 
 
 def logg_script(file_name, save_path):
-  source=f"/content/drive/MyDrive/Colab Notebooks/{file_name}"
+  source= f"/content/drive/MyDrive/Colab Notebooks/{file_name}"
   destination=save_path+f"{file_name}.ipynb"
   shutil.copy2(source, destination)
 
@@ -490,7 +491,7 @@ pickle_path="/content/drive/MyDrive/Colab Notebooks/Jax_Generalizer/Logs/23.06.2
 use_father=True
 
 '''Load all best weights from log directory'''
-use_all_pickle=True
+use_all_pickle=False
 all_pickle_path="/content/drive/MyDrive/Colab Notebooks/Jax_Generalizer/Logs/23.06.2022_14.03/Logs/24.06.2022_10.22/"
 all_pickle_children=10 #number of offsprings per pickle
 
@@ -511,7 +512,7 @@ testing_cat_means=[]
 
 '''Initialize Logging'''
 pathandstuff()
-logg_script(file_name, save_path)
+#logg_script(file_name, save_path)
 log_variables()
 
 
