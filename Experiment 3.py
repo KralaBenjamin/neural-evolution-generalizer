@@ -89,7 +89,7 @@ kernelsize_ = (3, 3)
 use_sigma_decay = True
 sigma_start = 1.0
 sigma_goal = 0.1
-
+2
 """logging to screen variables"""
 print_offsprings = True
 print_distribution_data = False

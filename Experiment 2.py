@@ -30,7 +30,7 @@ import numpy as np
 import torch
 import torch.utils.data as data_utils
 import torchvision
-from google.colab import drive
+#from google.colab import drive
 from jax import grad, jit, pmap, random, value_and_grad, vmap
 from jax.example_libraries import optimizers, stax
 from jax.example_libraries.stax import Dense, LogSoftmax, Relu
@@ -42,7 +42,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import CIFAR100, EMNIST, KMNIST, MNIST, FashionMNIST
 
-drive.mount('/content/drive')
+#drive.mount('/content/drive')
 
 """## **Funktions**
 
@@ -294,9 +294,6 @@ conv_init, conv_apply = stax.serial(
     stax.MaxPool((5,5))
 )
 '''
-
-!nvidia-smi
-
 Convu1_in=32
 Convu2_in=64
 Convu3_in=64
