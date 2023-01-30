@@ -12,44 +12,36 @@ Original file is located at
 2.   Listeneintrag
 """
 
-import numpy as np
-import jax.numpy as jnp
-from jax.scipy.special import logsumexp
-import jax
-import _pickle as cPickle
-import pickle
 import copy
-from jax import jit, vmap, pmap, grad, value_and_grad
-import random
-from torchvision.datasets import MNIST
-from torchvision.datasets import KMNIST
-from torchvision.datasets import CIFAR100
-from torchvision.datasets import EMNIST
-from torchvision.datasets import FashionMNIST
-from torch.utils.data import DataLoader
-from jax.example_libraries import stax, optimizers
-import torchvision
-import torch
-from sklearn.neighbors import NearestNeighbors
-import torch.utils.data as data_utils
-from jax.flatten_util import ravel_pytree
-import os
-import time
-import shutil
-import _pickle as cPickle
-from math import e
-import time
-from jax.example_libraries import stax
-from jax.example_libraries.stax import Dense, Relu, LogSoftmax
-from sklearn.model_selection import train_test_split
-from jax import random 
-import matplotlib.pyplot as plt
-from torchvision import transforms
-from logging import Logger
-import time
 import itertools
+import os
+import pickle
+import random
+import shutil
+import time
+from logging import Logger
+from math import e
 
+import _pickle as cPickle
+import jax
+import jax.numpy as jnp
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.utils.data as data_utils
+import torchvision
 from google.colab import drive
+from jax import grad, jit, pmap, random, value_and_grad, vmap
+from jax.example_libraries import optimizers, stax
+from jax.example_libraries.stax import Dense, LogSoftmax, Relu
+from jax.flatten_util import ravel_pytree
+from jax.scipy.special import logsumexp
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import NearestNeighbors
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from torchvision.datasets import CIFAR100, EMNIST, KMNIST, MNIST, FashionMNIST
+
 drive.mount('/content/drive')
 
 """## **Funktions**
@@ -734,14 +726,3 @@ for meta in range (n_metaepochs):
 
 
 
-
-
-
-
-
-
-
-
-
-
-"""# Archiv"""

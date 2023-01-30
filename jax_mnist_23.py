@@ -12,202 +12,188 @@ Original file is located at
 2.   Listeneintrag
 """
 
-import numpy as np
-import jax.numpy as jnp
-from jax.scipy.special import logsumexp
-import jax
-import _pickle as cPickle
-import pickle
 import copy
-from jax import jit, vmap, pmap, grad, value_and_grad
-import random
-from torchvision.datasets import MNIST
-from torchvision.datasets import KMNIST
-from torch.utils.data import DataLoader
-from jax.example_libraries import stax, optimizers
-import torchvision
-import torch
-from sklearn.neighbors import NearestNeighbors
-import torch.utils.data as data_utils
-from jax.flatten_util import ravel_pytree
 import os
-import time
+import pickle
+import random
 import shutil
-import _pickle as cPickle
 import time
-from jax.example_libraries import stax
-from jax.example_libraries.stax import Dense, Relu, LogSoftmax
-from sklearn.model_selection import train_test_split
-from jax import random
 
-#from google.colab import drive
-#drive.mount('/content/drive')
+import _pickle as cPickle
+import jax
+import jax.numpy as jnp
+import numpy as np
+import torch
+import torch.utils.data as data_utils
+import torchvision
+from jax import grad, jit, pmap, random, value_and_grad, vmap
+from jax.example_libraries import optimizers, stax
+from jax.example_libraries.stax import Dense, LogSoftmax, Relu
+from jax.flatten_util import ravel_pytree
+from jax.scipy.special import logsumexp
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import NearestNeighbors
+from torch.utils.data import DataLoader
+from torchvision.datasets import KMNIST, MNIST
+
+# from google.colab import drive
+# drive.mount('/content/drive')
 
 """### Global Variables
 Most variables overriden in part before main code part!!!
 """
 
-#Needs Cleaning
+# Needs Cleaning
 
-'''Set your file directorys'''
+"""Set your file directorys"""
 
-googledrive_path="/content/drive/MyDrive/Colab Notebooks/Jax_MNist/"
-local_path="C:/Users/Flo/Documents/Uni/Masterarbeit/Hanabi/Mnist handwritten digits/"
-
-
+googledrive_path = "/content/drive/MyDrive/Colab Notebooks/Jax_MNist/"
+local_path = "C:/Users/Flo/Documents/Uni/Masterarbeit/Hanabi/Mnist handwritten digits/"
 
 
+"""number of training epochs for Network2"""
+n_training_epochs = 3  # number of training epochs for every NN2.
+n_offsp_epoch = 10  # number of training and testing runs combined, to get an average for the performance of the Convu net.
+n_testing_epochs = 3  # number of testing runs, per n_offsp_epoch
 
-'''number of training epochs for Network2'''
-n_training_epochs = 3 #number of training epochs for every NN2.  
-n_offsp_epoch = 10 #number of training and testing runs combined, to get an average for the performance of the Convu net.
-n_testing_epochs = 3 # number of testing runs, per n_offsp_epoch
-
-'''parameter Network2'''
-n_samples = 150  #Number of training samples for NN2, distribution of data for 600: [68, 59, 66, 67, 47, 46, 65, 71, 53, 58])
-n_test=1000 #Number of test samples for NN2. Needs to be multiples of batch_size_test=500 )
-batch_size = 50 # for precise n_samples number must be: n_samples%batch_size_train=0
+"""parameter Network2"""
+n_samples = 150  # Number of training samples for NN2, distribution of data for 600: [68, 59, 66, 67, 47, 46, 65, 71, 53, 58])
+n_test = 1000  # Number of test samples for NN2. Needs to be multiples of batch_size_test=500 )
+batch_size = 50  # for precise n_samples number must be: n_samples%batch_size_train=0
 
 learning_rate = 0.1
 momentum = 0.5
 log_interval = 10
 
 
-
-'''Standard deviation for gaussian noise in Network1'''
-'''!!! Important hyperparameter, >=1 gives bad results'''
-std_modifier=0.05
-
+"""Standard deviation for gaussian noise in Network1"""
+"""!!! Important hyperparameter, >=1 gives bad results"""
+std_modifier = 0.05
 
 
-'''number of offsprings per metaepoch'''
-n_offsprings=100
-'''number of metaopochs'''
-n_metaepochs=10
+"""number of offsprings per metaepoch"""
+n_offsprings = 100
+"""number of metaopochs"""
+n_metaepochs = 10
 
 
-NNin1=2500 #dependent on Convu
-NNout1=10
+NNin1 = 2500  # dependent on Convu
+NNout1 = 10
 
 
+"""Convunet"""
+Convu1_in = 1
+Convu2_in = 12
+Convu3_in = 24
+seed_convu = 0
 
-'''Convunet'''
-Convu1_in=1
-Convu2_in=12
-Convu3_in=24
-seed_convu=0
-
-n_samples=150 #number of training samples
+n_samples = 150  # number of training samples
 batch_size = 50
-n_test=1000
-n_training_epochs=3
-print_distribution_data=False
-std_modifier=0.05
+n_test = 1000
+n_training_epochs = 3
+print_distribution_data = False
+std_modifier = 0.05
 
 
-Convu1_in=32
-Convu2_in=16
-Convu3_in=4
-kernelsize_=(3,3)
+Convu1_in = 32
+Convu2_in = 16
+Convu3_in = 4
+kernelsize_ = (3, 3)
 
 
+use_sigma_decay = True
+sigma_start = 1.0
+sigma_goal = 0.1
 
-use_sigma_decay=True
-sigma_start=1.0
-sigma_goal=0.1
+"""logging to screen variables"""
+print_offsprings = True
+print_distribution_data = False
+use_sigma_decay = True  # otherwise using constant sigma from config tab
+sigma_start = 1
+sigma_goal = 0.05  # sigma goal after n_metaepochs
 
-'''logging to screen variables'''
-print_offsprings=True
-print_distribution_data=False
-use_sigma_decay=True #otherwise using constant sigma from config tab
-sigma_start=1 
-sigma_goal=0.05 #sigma goal after n_metaepochs
-        
-'''choose either method, softmax or elitist=keep only best offspring'''
-use_softmax=True
-temperature=0.05
-use_elitist=False
-use_winnerlist=False
+"""choose either method, softmax or elitist=keep only best offspring"""
+use_softmax = True
+temperature = 0.05
+use_elitist = False
+use_winnerlist = False
 
-n_metaepochs=30 #overwriting variable from config tab, delete later
-n_offsprings=10 #overwriting variable from config tab, delete later
+n_metaepochs = 30  # overwriting variable from config tab, delete later
+n_offsprings = 10  # overwriting variable from config tab, delete later
 
-'''number of training epochs for Network2'''
+"""number of training epochs for Network2"""
 n_offsp_epoch = 2
 n_testing_epochs = 5
-n_metaepochs=10
+n_metaepochs = 10
 
 """## **Funktions**"""
 
-def logg_to_file (string_, array=None):
-  if array is None:
 
-    file1 = open(save_txt,"a")
-    file1.write(string_)
-    file1.write("\n")
-    file1.close()
-    
-  if array is not None:
+def logg_to_file(string_, array=None):
+    if array is None:
 
-    file1 = open(save_txt,"a")
-    file1.write(string_)
-    file1.write(str(array))
-    file1.write("\n")
-    file1.close()
+        file1 = open(save_txt, "a")
+        file1.write(string_)
+        file1.write("\n")
+        file1.close()
+
+    if array is not None:
+
+        file1 = open(save_txt, "a")
+        file1.write(string_)
+        file1.write(str(array))
+        file1.write("\n")
+        file1.close()
+
 
 def log_variables():
-    
-    logg_to_file (("n_training_epochs = {}".format(n_training_epochs)))
-    logg_to_file (("n_offsp_epoch = {}".format(n_offsp_epoch)))
-    
-    logg_to_file (("n_samples = {}".format(n_samples)))
-    logg_to_file (("n_test = {}".format(n_test)))
-    logg_to_file (("batch_size = {}".format(batch_size)))
 
-    logg_to_file (("use_focus = {}".format(use_focus)))
-    #logg_to_file (("focus_layer = {}".format(focus_layer)))
-    logg_to_file (("focus_change_every = {}".format(focus_change_every)))
+    logg_to_file(("n_training_epochs = {}".format(n_training_epochs)))
+    logg_to_file(("n_offsp_epoch = {}".format(n_offsp_epoch)))
 
-    
-    logg_to_file (("use_sigma_decay = {}".format(use_sigma_decay)))
-    logg_to_file (("n_decay_epochs = {}".format(n_decay_epochs)))
-    logg_to_file (("sigma_start = {}".format(sigma_start)))
-    logg_to_file (("sigma_goal = {}".format(sigma_goal)))
+    logg_to_file(("n_samples = {}".format(n_samples)))
+    logg_to_file(("n_test = {}".format(n_test)))
+    logg_to_file(("batch_size = {}".format(batch_size)))
 
-  
-    logg_to_file (("use_KNN = {}".format(use_KNN)))
-    logg_to_file (("KNN_n_neighbors = {}".format(KNN_n_neighbors)))
-    logg_to_file (("KNN_top_n = {}".format(KNN_top_n)))
-    logg_to_file (("n_KNN_subsprings = {}".format(n_KNN_subsprings)))
+    logg_to_file(("use_focus = {}".format(use_focus)))
+    # logg_to_file (("focus_layer = {}".format(focus_layer)))
+    logg_to_file(("focus_change_every = {}".format(focus_change_every)))
 
+    logg_to_file(("use_sigma_decay = {}".format(use_sigma_decay)))
+    logg_to_file(("n_decay_epochs = {}".format(n_decay_epochs)))
+    logg_to_file(("sigma_start = {}".format(sigma_start)))
+    logg_to_file(("sigma_goal = {}".format(sigma_goal)))
 
+    logg_to_file(("use_KNN = {}".format(use_KNN)))
+    logg_to_file(("KNN_n_neighbors = {}".format(KNN_n_neighbors)))
+    logg_to_file(("KNN_top_n = {}".format(KNN_top_n)))
+    logg_to_file(("n_KNN_subsprings = {}".format(n_KNN_subsprings)))
 
+    logg_to_file(("std_modifier = {}".format(std_modifier)))
+    logg_to_file(("use_sigma_decay = {}".format(use_sigma_decay)))
+    logg_to_file(("sigma_start = {}".format(sigma_start)))
+    logg_to_file(("sigma_goal = {}".format(sigma_goal)))
+    logg_to_file(("n_decay_epochs = {}".format(n_decay_epochs)))
+    logg_to_file(("use_pickle = {}".format(use_pickle)))
+    logg_to_file(("pickle_path = {}".format(pickle_path)))
+    logg_to_file(("use_father = {}".format(use_father)))
 
-    logg_to_file (("std_modifier = {}".format(std_modifier)))
-    logg_to_file (("use_sigma_decay = {}".format(use_sigma_decay)))
-    logg_to_file (("sigma_start = {}".format(sigma_start)))
-    logg_to_file (("sigma_goal = {}".format(sigma_goal)))
-    logg_to_file (("n_decay_epochs = {}".format(n_decay_epochs)))
-    logg_to_file (("use_pickle = {}".format(use_pickle)))
-    logg_to_file (("pickle_path = {}".format(pickle_path)))
-    logg_to_file (("use_father = {}".format(use_father)))
+    logg_to_file(("NNin1 = {}".format(NNin1)))
+    logg_to_file(("NNout1 = {}".format(NNout1)))
+    logg_to_file(("Convu_in1 = {}".format(Convu1_in)))
+    logg_to_file(("Convu2_in = {}".format(Convu2_in)))
+    logg_to_file(("Convu3_in = {}".format(Convu3_in)))
 
+    logg_to_file(("kernelsize_ = {}".format(kernelsize_)))
 
-    logg_to_file (("NNin1 = {}".format(NNin1)))
-    logg_to_file (("NNout1 = {}".format(NNout1)))
-    logg_to_file (("Convu_in1 = {}".format(Convu1_in)))
-    logg_to_file (("Convu2_in = {}".format(Convu2_in)))
-    logg_to_file (("Convu3_in = {}".format(Convu3_in)))
+    logg_to_file(("n_metaepochs = {}".format(n_metaepochs)))
+    logg_to_file(("n_testing_epochs = {}".format(n_testing_epochs)))
+    logg_to_file(("n_offsp_epoch = {}".format(n_offsp_epoch)))
+    logg_to_file(("n_offsprings = {}".format(n_offsprings)))
 
-    logg_to_file (("kernelsize_ = {}".format(kernelsize_)))
-    
-    logg_to_file (("n_metaepochs = {}".format(n_metaepochs)))
-    logg_to_file (("n_testing_epochs = {}".format(n_testing_epochs)))         
-    logg_to_file (("n_offsp_epoch = {}".format(n_offsp_epoch)))
-    logg_to_file (("n_offsprings = {}".format(n_offsprings)))
+    logg_to_file(("use_softmax = {}".format(use_softmax)))
+    logg_to_file(("temperature = {}".format(temperature)))
 
-    logg_to_file (("use_softmax = {}".format(use_softmax)))
-    logg_to_file (("temperature = {}".format(temperature)))
 
 def pathandstuff():
 
@@ -216,89 +202,110 @@ def pathandstuff():
     global save_path
 
     if os.path.exists(local_path):
-        '''Save running code file to log folder'''
-        #nb_full_path = os.path.join(os.getcwd(), nb_name) #path of current notebook
-        #shutil.copy2(nb_full_path, save_path) #save running code file to log folder
+        """Save running code file to log folder"""
+        # nb_full_path = os.path.join(os.getcwd(), nb_name) #path of current notebook
+        # shutil.copy2(nb_full_path, save_path) #save running code file to log folder
         print("on local")
-        base_path=local_path
+        base_path = local_path
     elif os.path.exists(googledrive_path):
         print("on google")
-        base_path=googledrive_path
+        base_path = googledrive_path
     else:
-        raise ValueError('Please specify save path or connect to Google Drive')
-        
-    logs_path=base_path+"Logs/"
-    '''Set logging and temp paths'''
-    timestamp=time.strftime("%d.%m.%Y_%H.%M")
-    foldername=timestamp
-    save_path=os.path.join(logs_path,foldername,)
-    save_path=save_path+"/"
-    save_txt = os.path.join(save_path, 'Log_Jax_MNist_{}.txt'.format(foldername))
+        raise ValueError("Please specify save path or connect to Google Drive")
+
+    logs_path = base_path + "Logs/"
+    """Set logging and temp paths"""
+    timestamp = time.strftime("%d.%m.%Y_%H.%M")
+    foldername = timestamp
+    save_path = os.path.join(
+        logs_path,
+        foldername,
+    )
+    save_path = save_path + "/"
+    save_txt = os.path.join(save_path, "Log_Jax_MNist_{}.txt".format(foldername))
 
     if use_paralleltraining:
-      save_path=parallel_path
-      save_txt = os.path.join(save_path, 'Log_Jax_MNist_{}.txt'.format(file_name))
-      
-      
-    print("Log path:",save_path)
+        save_path = parallel_path
+        save_txt = os.path.join(save_path, "Log_Jax_MNist_{}.txt".format(file_name))
+
+    print("Log path:", save_path)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    
-
-
-
 
 def logg_script(file_name, save_path):
-  source=f"/content/drive/MyDrive/Colab Notebooks/{file_name}"
-  destination=save_path+f"{file_name}.ipynb"
-  shutil.copy2(source, destination)
+    source = f"/content/drive/MyDrive/Colab Notebooks/{file_name}"
+    destination = save_path + f"{file_name}.ipynb"
+    shutil.copy2(source, destination)
 
-'''logging to txt and print'''
-def logg (string_, array=None):
-  if array is None:
 
-    file1 = open(save_txt,"a")
-    file1.write(string_)
-    file1.write("\n")
-    file1.close()
-    print(string_)
-  if array is not None:
+"""logging to txt and print"""
 
-    file1 = open(save_txt,"a")
-    file1.write(string_)
-    file1.write(str(array))
-    file1.write("\n")
-    file1.close()
-    print(string_, array)
 
-train_dataset = MNIST(root='train_mnist', train=True, download=True,transform=torchvision.transforms.Compose([
-                                            torchvision.transforms.ToTensor(),
-                                            torchvision.transforms.Normalize((0.1307,), (0.3081,))]))
+def logg(string_, array=None):
+    if array is None:
 
-test_dataset = MNIST(root='test_mnist', train=False, download=True,transform=torchvision.transforms.Compose([
-                                            torchvision.transforms.ToTensor(),
-                                            torchvision.transforms.Normalize((0.1307,), (0.3081,))]))
+        file1 = open(save_txt, "a")
+        file1.write(string_)
+        file1.write("\n")
+        file1.close()
+        print(string_)
+    if array is not None:
 
-x = np.concatenate((train_dataset.data,test_dataset.data))
-y= np.concatenate((train_dataset.targets,test_dataset.targets))
+        file1 = open(save_txt, "a")
+        file1.write(string_)
+        file1.write(str(array))
+        file1.write("\n")
+        file1.close()
+        print(string_, array)
 
-x = jnp.array(x,dtype="float32").reshape(len(x), -1)
+
+train_dataset = MNIST(
+    root="train_mnist",
+    train=True,
+    download=True,
+    transform=torchvision.transforms.Compose(
+        [
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.1307,), (0.3081,)),
+        ]
+    ),
+)
+
+test_dataset = MNIST(
+    root="test_mnist",
+    train=False,
+    download=True,
+    transform=torchvision.transforms.Compose(
+        [
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.1307,), (0.3081,)),
+        ]
+    ),
+)
+
+x = np.concatenate((train_dataset.data, test_dataset.data))
+y = np.concatenate((train_dataset.targets, test_dataset.targets))
+
+x = jnp.array(x, dtype="float32").reshape(len(x), -1)
 y = jnp.array(y)
+
 
 def init_MLP(layer_widths, parent_key, scale=0.01):
 
     params = []
-    keys = jax.random.split(parent_key, num=len(layer_widths)-1)
+    keys = jax.random.split(parent_key, num=len(layer_widths) - 1)
 
     for in_width, out_width, key in zip(layer_widths[:-1], layer_widths[1:], keys):
         weight_key, bias_key = jax.random.split(key)
-        params.append([
-                       scale*jax.random.normal(weight_key, shape=(out_width, in_width)),
-                       scale*jax.random.normal(bias_key, shape=(out_width,))
-                       ]
+        params.append(
+            [
+                scale * jax.random.normal(weight_key, shape=(out_width, in_width)),
+                scale * jax.random.normal(bias_key, shape=(out_width,)),
+            ]
         )
     return params
+
 
 @jit
 def MLP_predict(params, x):
@@ -314,90 +321,108 @@ def MLP_predict(params, x):
 
     return logits - logsumexp(logits)
 
-jit_MLP_predict=jit(MLP_predict)
+
+jit_MLP_predict = jit(MLP_predict)
+
 
 @jit
-def batched_MLP_predict(params,x):
-  return vmap(jit_MLP_predict, (None, 0))(params,x)
-  
-jit_batched_MLP_predict=jit(batched_MLP_predict)
+def batched_MLP_predict(params, x):
+    return vmap(jit_MLP_predict, (None, 0))(params, x)
 
-Convu1_in=16
-Convu2_in=24
-Convu3_in=1
+
+jit_batched_MLP_predict = jit(batched_MLP_predict)
+
+Convu1_in = 16
+Convu2_in = 24
+Convu3_in = 1
 
 conv_init, conv_apply = stax.serial(
-    stax.Conv(Convu1_in,kernelsize_, padding="SAME"),
+    stax.Conv(Convu1_in, kernelsize_, padding="SAME"),
     stax.BatchNorm(),
     stax.Relu,
-    stax.MaxPool((2,2)),
+    stax.MaxPool((2, 2)),
     stax.Conv(Convu2_in, kernelsize_, padding="SAME"),
     stax.BatchNorm(),
     stax.Relu,
-    stax.MaxPool((2,2)),
+    stax.MaxPool((2, 2)),
     stax.Conv(Convu3_in, kernelsize_, padding="SAME"),
     stax.Relu,
-    stax.MaxPool((2,2))
+    stax.MaxPool((2, 2)),
 )
 
-'''After changing Convu structure test if convu out and NN in matches, set NNin1=25*25*4 to corresponding shape in error (5, 25, 25, 4) '''
-NNin1=625
-rng=jax.random.PRNGKey(1)
+"""After changing Convu structure test if convu out and NN in matches, set NNin1=25*25*4 to corresponding shape in error (5, 25, 25, 4) """
+NNin1 = 625
+rng = jax.random.PRNGKey(1)
 
-father_weights = conv_init(rng, (batch_size,28,28,1))
+father_weights = conv_init(rng, (batch_size, 28, 28, 1))
 father_weights = father_weights[1]
 
 
-x_train=x[random.randint(rng, (n_offsp_epoch*n_samples,), 0, 60000, dtype='uint8')]
-testaffe=x_train[0:5]
-imgs = conv_apply(father_weights, testaffe.reshape(-1,28,28,1))
+x_train = x[random.randint(rng, (n_offsp_epoch * n_samples,), 0, 60000, dtype="uint8")]
+testaffe = x_train[0:5]
+imgs = conv_apply(father_weights, testaffe.reshape(-1, 28, 28, 1))
 
 MLP_params = init_MLP([NNin1, 10], rng)
 
-pred_classes = jnp.argmax(jit_batched_MLP_predict(MLP_params, imgs.reshape(-1,NNin1)), axis=1)
+pred_classes = jnp.argmax(
+    jit_batched_MLP_predict(MLP_params, imgs.reshape(-1, NNin1)), axis=1
+)
+
 
 @jit
 def loss_fn(params, imgs, gt_lbls):
-  
+
     predictions = jit_batched_MLP_predict(params, imgs)
-    #print("predictions",predictions.shape)
+    # print("predictions",predictions.shape)
     return -jnp.mean(predictions * gt_lbls)
-    
-jit_loss_fn=jit(loss_fn)
+
+
+jit_loss_fn = jit(loss_fn)
+
 
 @jit
 def update(params, imgs, gt_lbls, lr=0.01):
     loss, grads = value_and_grad(loss_fn)(params, imgs, gt_lbls)
 
-    return loss, jax.tree_multimap(lambda p, g: p - lr*g, params, grads)
+    return loss, jax.tree_multimap(lambda p, g: p - lr * g, params, grads)
 
-jit_update=jit(update)
+
+jit_update = jit(update)
+
 
 @jit
-def accuracy(conv_weights,MLP_params, dataset_imgs, dataset_lbls):
+def accuracy(conv_weights, MLP_params, dataset_imgs, dataset_lbls):
 
-    imgs = conv_apply(conv_weights, dataset_imgs.reshape(-1,28,28,1))
-    pred_classes = jnp.argmax(jit_batched_MLP_predict(MLP_params, imgs.reshape(-1,NNin1)), axis=1)
+    imgs = conv_apply(conv_weights, dataset_imgs.reshape(-1, 28, 28, 1))
+    pred_classes = jnp.argmax(
+        jit_batched_MLP_predict(MLP_params, imgs.reshape(-1, NNin1)), axis=1
+    )
 
     return jnp.mean(dataset_lbls == pred_classes)
-    
-jit_accuracy=jit(accuracy)
 
-'''For loop is neccesary to do batch training. Every update iteration needs to run with updated MPL params'''
+
+jit_accuracy = jit(accuracy)
+
+"""For loop is neccesary to do batch training. Every update iteration needs to run with updated MPL params"""
+
+
 @jit
-def train(conv_weights, imgs, lbls,MLP_params ):
-  for n in range(n_training_epochs):  
-    for i in range(jnp.shape(imgs)[0]):
+def train(conv_weights, imgs, lbls, MLP_params):
+    for n in range(n_training_epochs):
+        for i in range(jnp.shape(imgs)[0]):
 
-      gt_labels = jax.nn.one_hot(lbls[i], 10)
-      img_conv = conv_apply(conv_weights, imgs[i].reshape(-1,28,28,1))
-      loss, MLP_params = jit_update(MLP_params, img_conv.reshape(-1,NNin1), gt_labels)
+            gt_labels = jax.nn.one_hot(lbls[i], 10)
+            img_conv = conv_apply(conv_weights, imgs[i].reshape(-1, 28, 28, 1))
+            loss, MLP_params = jit_update(
+                MLP_params, img_conv.reshape(-1, NNin1), gt_labels
+            )
 
-  return MLP_params
-  
-jit_train=jit(train)
+    return MLP_params
 
-'''
+
+jit_train = jit(train)
+
+"""
 Running for every offspring n_offsp_epoch loops to get stable acc results. 
 Every loop is trained with n_samples/batch_size * batch size training epochs.
 Everything put in jit and vmap to speed up
@@ -411,77 +436,104 @@ Input
 (n_offsp_epoch, n_samples/batch_size, batch size, 28, 28, 1)
 (n_offsp_epoch, n_samples/batch_size, batch size)
 (n_offsp_epoch, n_test, 28, 28, 1)
-(n_offsp_epoch, n_test)'''
+(n_offsp_epoch, n_test)"""
+
 
 @jit
-def bootstrapp_offspring_MLP(key,conv_weights, batch_affe, labelaffe,test_images,test_lbls):
-  
-  
-  MLP_params = init_MLP([NNin1, NNout1], key)
-  MLP_params_trained=jit_train(conv_weights, batch_affe, labelaffe,MLP_params )
- 
-  
-  result=jit_accuracy(conv_weights,MLP_params_trained,test_images,test_lbls)
-  return (result)
+def bootstrapp_offspring_MLP(
+    key, conv_weights, batch_affe, labelaffe, test_images, test_lbls
+):
 
-jit_bootstrapp_offspring_MLP=jit(bootstrapp_offspring_MLP)  
+    MLP_params = init_MLP([NNin1, NNout1], key)
+    MLP_params_trained = jit_train(conv_weights, batch_affe, labelaffe, MLP_params)
+
+    result = jit_accuracy(conv_weights, MLP_params_trained, test_images, test_lbls)
+    return result
+
+
+jit_bootstrapp_offspring_MLP = jit(bootstrapp_offspring_MLP)
+
 
 @jit
-def vmap_bootstrapp_offspring_MLP(key, conv_weights, batch_affe, labelaffe,test_images,test_lbls):
-  return vmap(jit_bootstrapp_offspring_MLP, ( None,None, 0,0,0,0))(key, conv_weights, batch_affe, labelaffe,test_images,test_lbls)
-  
-jit_vmap_bootstrapp_offspring_MLP=jit(vmap_bootstrapp_offspring_MLP)
+def vmap_bootstrapp_offspring_MLP(
+    key, conv_weights, batch_affe, labelaffe, test_images, test_lbls
+):
+    return vmap(jit_bootstrapp_offspring_MLP, (None, None, 0, 0, 0, 0))(
+        key, conv_weights, batch_affe, labelaffe, test_images, test_lbls
+    )
 
-'''creating offsprings Approach 1'''
-def create_offsprings(n_offspr, fath_weights,std_modifier,seed):
-  np.random.seed(seed)
-  statedic_list=[]
-  for i in range(0,n_offspr):
-    dicta = [()] * len(father_weights)
-    for idx,w in enumerate(father_weights):
-        if w:
-            w, b = w
-            #print("Weights : {}, Biases : {}".format(w.shape, b.shape))
-      
-            '''if weight layer only contains 0 and 1, only copy original weight layer, dont add random noise. Purpose of these 0 and 1 layers unclear'''
-            if any(w[0].shape==t for t in [(Convu1_in,) ,(Convu2_in,), (Convu3_in,)]):
-              x_w=w
-              x_b=b
-            else:
-              seed=np.random.randint(0,100000)
-              key = random.PRNGKey(seed)
-              x_w = w+random.normal(key,shape=w.shape)*std_modifier #tested, random.normal adding different random noise value to every single weight
-              x_b = b+random.normal(key,shape=b.shape)*std_modifier
-            dicta[idx]=(x_w,x_b)
-    
-    statedic_list.append(dicta)
-  return statedic_list
 
-'''creating offsprings Approach 2'''
-def create_focus_offsprings(n_offspr, fath_weights,std_modifier, focus_layer):
-  statedic_list=[]
-  for i in range(0,n_offspr):
-    dicta = [()] * len(father_weights)
-    for idx,w in enumerate(father_weights):
-        if w:
-            w, b = w
-            #print("Weights : {}, Biases : {}".format(w.shape, b.shape))
-      
-            '''if weight layer only contains 0 and 1, only copy original weight layer, dont add random noise. Purpose of these 0 and 1 layers unclear'''
-            if any(w[0].shape==t for t in [(Convu1_in,) ,(Convu2_in,), (Convu3_in,)]) or idx!=focus_layer:
-              x_w=w
-              x_b=b
-            else:
-              seed=np.random.randint(0,100000)
-              key = random.PRNGKey(seed)
-              x_w = w+random.normal(key,shape=w.shape)*std_modifier #tested, random.normal adding different random noise value to every single weight
-              x_b = b+random.normal(key,shape=b.shape)*std_modifier
-            dicta[idx]=(x_w,x_b)
-    
-    statedic_list.append(dicta)
-  return statedic_list
+jit_vmap_bootstrapp_offspring_MLP = jit(vmap_bootstrapp_offspring_MLP)
 
-'''creating offsprings Approach 2, filling treeleaf of 0 and 1 with gaussian noise, doesnt seem to be a problem, ex in offspring_list[0][5]'''
+"""creating offsprings Approach 1"""
+
+
+def create_offsprings(n_offspr, fath_weights, std_modifier, seed):
+    np.random.seed(seed)
+    statedic_list = []
+    for i in range(0, n_offspr):
+        dicta = [()] * len(father_weights)
+        for idx, w in enumerate(father_weights):
+            if w:
+                w, b = w
+                # print("Weights : {}, Biases : {}".format(w.shape, b.shape))
+
+                """if weight layer only contains 0 and 1, only copy original weight layer, dont add random noise. Purpose of these 0 and 1 layers unclear"""
+                if any(
+                    w[0].shape == t for t in [(Convu1_in,), (Convu2_in,), (Convu3_in,)]
+                ):
+                    x_w = w
+                    x_b = b
+                else:
+                    seed = np.random.randint(0, 100000)
+                    key = random.PRNGKey(seed)
+                    x_w = (
+                        w + random.normal(key, shape=w.shape) * std_modifier
+                    )  # tested, random.normal adding different random noise value to every single weight
+                    x_b = b + random.normal(key, shape=b.shape) * std_modifier
+                dicta[idx] = (x_w, x_b)
+
+        statedic_list.append(dicta)
+    return statedic_list
+
+
+"""creating offsprings Approach 2"""
+
+
+def create_focus_offsprings(n_offspr, fath_weights, std_modifier, focus_layer):
+    statedic_list = []
+    for i in range(0, n_offspr):
+        dicta = [()] * len(father_weights)
+        for idx, w in enumerate(father_weights):
+            if w:
+                w, b = w
+                # print("Weights : {}, Biases : {}".format(w.shape, b.shape))
+
+                """if weight layer only contains 0 and 1, only copy original weight layer, dont add random noise. Purpose of these 0 and 1 layers unclear"""
+                if (
+                    any(
+                        w[0].shape == t
+                        for t in [(Convu1_in,), (Convu2_in,), (Convu3_in,)]
+                    )
+                    or idx != focus_layer
+                ):
+                    x_w = w
+                    x_b = b
+                else:
+                    seed = np.random.randint(0, 100000)
+                    key = random.PRNGKey(seed)
+                    x_w = (
+                        w + random.normal(key, shape=w.shape) * std_modifier
+                    )  # tested, random.normal adding different random noise value to every single weight
+                    x_b = b + random.normal(key, shape=b.shape) * std_modifier
+                dicta[idx] = (x_w, x_b)
+
+        statedic_list.append(dicta)
+    return statedic_list
+
+
+"""creating offsprings Approach 2, filling treeleaf of 0 and 1 with gaussian noise, doesnt seem to be a problem, ex in offspring_list[0][5]"""
+
 
 def random_split_like_tree(rng_key, target=None, treedef=None):
     if treedef is None:
@@ -490,341 +542,373 @@ def random_split_like_tree(rng_key, target=None, treedef=None):
     return jax.tree_unflatten(treedef, keys)
 
 
-def tree_random_normal_like(rng_key, target,std_modifier):
+def tree_random_normal_like(rng_key, target, std_modifier):
     keys_tree = random_split_like_tree(rng_key, target)
     return jax.tree_multimap(
-        lambda l, k: jax.random.normal(k, l.shape, l.dtype)*std_modifier,
+        lambda l, k: jax.random.normal(k, l.shape, l.dtype) * std_modifier,
         target,
         keys_tree,
     )
 
-def jax_create_offsprings(key,n_offspr,  fath_weights,std_modifier):
-  statedic_list=[]
-  for i in range(0,n_offspr):
-    rng=jax.random.PRNGKey(key+i)
-    random_value_tree=tree_random_normal_like(rng,fath_weights,std_modifier)
-    son=jax.tree_map(lambda x,y: x+y, fath_weights,random_value_tree)
-    statedic_list.append(son)
 
-  return statedic_list
+def jax_create_offsprings(key, n_offspr, fath_weights, std_modifier):
+    statedic_list = []
+    for i in range(0, n_offspr):
+        rng = jax.random.PRNGKey(key + i)
+        random_value_tree = tree_random_normal_like(rng, fath_weights, std_modifier)
+        son = jax.tree_map(lambda x, y: x + y, fath_weights, random_value_tree)
+        statedic_list.append(son)
 
-'''softmax for offspring list for approach 2
-    checked 11.04 working correctly'''
-def softmax_offlist(off_list,acc_list,temp):
-  softmax_list=softmax_result(acc_list,temp)
-  for i in range(len(off_list)):
-    if i==0:
-      top_dog=jax.tree_map(lambda x: x*softmax_list[i], off_list[i])
-    else:
-      general_dog = jax.tree_map(lambda x: x*softmax_list[i], off_list[i])
-      top_dog=jax.tree_map(lambda x,y: x+y, top_dog,general_dog)
-  return top_dog
+    return statedic_list
 
-'''Creates softmax/temp list out of accuracy list [0.2,0.3,....,0.8]'''
-def softmax_result(results,temp: float):
-    x = [z/temp for z in results]
+
+"""softmax for offspring list for approach 2
+    checked 11.04 working correctly"""
+
+
+def softmax_offlist(off_list, acc_list, temp):
+    softmax_list = softmax_result(acc_list, temp)
+    for i in range(len(off_list)):
+        if i == 0:
+            top_dog = jax.tree_map(lambda x: x * softmax_list[i], off_list[i])
+        else:
+            general_dog = jax.tree_map(lambda x: x * softmax_list[i], off_list[i])
+            top_dog = jax.tree_map(lambda x, y: x + y, top_dog, general_dog)
+    return top_dog
+
+
+"""Creates softmax/temp list out of accuracy list [0.2,0.3,....,0.8]"""
+
+
+def softmax_result(results, temp: float):
+    x = [z / temp for z in results]
     """Compute softmax values for each sets of scores in x."""
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum()
 
+
 def sigma_decay(start, end, n_iter):
-  return(end/start)**(1/n_iter)
+    return (end / start) ** (1 / n_iter)
+
 
 def KNN_weight_update(result_list_metaepoch, offspring_list):
 
-  offspring_list2=[]
-  flat_tw_weight_list=[]
+    offspring_list2 = []
+    flat_tw_weight_list = []
 
-  '''Get weights of top x'''
-  acc_list=np.array([x[0] for x in result_list_metaepoch])
-  ind_top_n = np.argpartition(acc_list, -Elitist_top_n)[-Elitist_top_n:]
-  tw_weight_list=[offspring_list[i] for i in ind_top_n]
-  top_acc_list=[acc_list[i] for i in ind_top_n]
+    """Get weights of top x"""
+    acc_list = np.array([x[0] for x in result_list_metaepoch])
+    ind_top_n = np.argpartition(acc_list, -Elitist_top_n)[-Elitist_top_n:]
+    tw_weight_list = [offspring_list[i] for i in ind_top_n]
+    top_acc_list = [acc_list[i] for i in ind_top_n]
 
-  for weight in tw_weight_list:
-    affe=jax.flatten_util.ravel_pytree(weight)
-    flat_tw_weight_list.append(np.array(affe[0]))
-  knn = NearestNeighbors(n_neighbors=KNN_n_neighbors)
-  knn.fit(flat_tw_weight_list)
-  distance_mat, neighbours_mat = knn.kneighbors(flat_tw_weight_list)
-    
-  for liste in neighbours_mat:
-    weight_list=[tw_weight_list[i] for i in liste]
-    acc_list2=[top_acc_list[i] for i in liste]
-    new_offspring=softmax_offlist(weight_list,acc_list2,temp)
-    offspring_list2.append(new_offspring)
-  if use_father:
-    offspring_list2.append(tw_weight_list)
-  return offspring_list2
+    for weight in tw_weight_list:
+        affe = jax.flatten_util.ravel_pytree(weight)
+        flat_tw_weight_list.append(np.array(affe[0]))
+    knn = NearestNeighbors(n_neighbors=KNN_n_neighbors)
+    knn.fit(flat_tw_weight_list)
+    distance_mat, neighbours_mat = knn.kneighbors(flat_tw_weight_list)
+
+    for liste in neighbours_mat:
+        weight_list = [tw_weight_list[i] for i in liste]
+        acc_list2 = [top_acc_list[i] for i in liste]
+        new_offspring = softmax_offlist(weight_list, acc_list2, temp)
+        offspring_list2.append(new_offspring)
+    if use_father:
+        offspring_list2.append(tw_weight_list)
+    return offspring_list2
+
 
 def elitist_performer(result_list_metaepoch, offspring_list):
-  
-  offspring_list2=[]
- 
-  '''Get weights of top x'''
-  acc_list=np.array([x[0] for x in result_list_metaepoch])
-  ind_top_n = np.argpartition(acc_list, -Elitist_top_n)[-Elitist_top_n:]
-  tw_weight_list=[offspring_list[i] for i in ind_top_n]
-  for performer in tw_weight_list:
-      new_offsprings=jax_create_offsprings((meta+numpy_seed),n_elitist_offsprings, performer,std_modifier)
-      offspring_list2.extend(new_offsprings)
-      if use_father:
-        offspring_list2.append(performer)
-  return offspring_list2
+
+    offspring_list2 = []
+
+    """Get weights of top x"""
+    acc_list = np.array([x[0] for x in result_list_metaepoch])
+    ind_top_n = np.argpartition(acc_list, -Elitist_top_n)[-Elitist_top_n:]
+    tw_weight_list = [offspring_list[i] for i in ind_top_n]
+    for performer in tw_weight_list:
+        new_offsprings = jax_create_offsprings(
+            (meta + numpy_seed), n_elitist_offsprings, performer, std_modifier
+        )
+        offspring_list2.extend(new_offsprings)
+        if use_father:
+            offspring_list2.append(performer)
+    return offspring_list2
 
 
+"""Only use one weight update method!"""
+"""Initialize Variables"""
 
-'''Only use one weight update method!'''
-'''Initialize Variables'''
+"""Use Elitist weight update"""
+use_elitist = False  # can be combined with Focus_Update
+Elitist_top_n = 10
+n_elitist_offsprings = 50
 
-'''Use Elitist weight update'''
-use_elitist=False #can be combined with Focus_Update
-Elitist_top_n=10
-n_elitist_offsprings=50
-
-'''Train multiple Google Colabs in parallel'''
-use_paralleltraining= False
-parallel_path="/content/drive/MyDrive/Colab Notebooks/Jax_MNist/Logs/24.04_parallel/"
-      
+"""Train multiple Google Colabs in parallel"""
+use_paralleltraining = False
+parallel_path = "/content/drive/MyDrive/Colab Notebooks/Jax_MNist/Logs/24.04_parallel/"
 
 
-n_metaepochs=1000
-n_offsprings=250
-n_samples = 100 #n of training independent training samples for 2nd network - MLP, samples are stratified
+n_metaepochs = 1000
+n_offsprings = 250
+n_samples = 100  # n of training independent training samples for 2nd network - MLP, samples are stratified
 
-n_training_epochs=30 #= how many times, is the same MLP trained with the same data. Reduces dependance on the initialization of MLP weights
+n_training_epochs = 30  # = how many times, is the same MLP trained with the same data. Reduces dependance on the initialization of MLP weights
 
 
 batch_size = 25
-n_test=1000
-n_offsp_epoch=30 #Bootstrapping, delivers more stable results for every offspring. Number of 2nd Networks per Offspring
+n_test = 1000
+n_offsp_epoch = 30  # Bootstrapping, delivers more stable results for every offspring. Number of 2nd Networks per Offspring
 
-'''keys'''
-starting_key=52 #define starting point
-MLP_key=369 #seed 
-numpy_seed=854 #in create offsprings
+"""keys"""
+starting_key = 52  # define starting point
+MLP_key = 369  # seed
+numpy_seed = 854  # in create offsprings
 
-use_sigma_decay=True #otherwise using constant sigma from config tab, decreasing sigma for random noise over time
-n_decay_epochs=int(n_metaepochs/2)   # over how many metaepochs sigma is decayed
-sigma_start=0.01
-sigma_goal=0.0000001 #sigma goal after n_metaepochs
+use_sigma_decay = True  # otherwise using constant sigma from config tab, decreasing sigma for random noise over time
+n_decay_epochs = int(n_metaepochs / 2)  # over how many metaepochs sigma is decayed
+sigma_start = 0.01
+sigma_goal = 0.0000001  # sigma goal after n_metaepochs
 
-use_sigma_randomizer=True #injects increased sigma for more random exploration
-std_random_modifier=100
-explo_rate=0.1 #how often sigma randomizer is used
+use_sigma_randomizer = True  # injects increased sigma for more random exploration
+std_random_modifier = 100
+explo_rate = 0.1  # how often sigma randomizer is used
 
-'''KNN weight update, disable sigma_decay, start with small sigma'''
-use_KNN=False
-KNN_n_neighbors=3
-KNN_top_n=10
-n_KNN_subsprings=50 #number offsprings of every KNN update
+"""KNN weight update, disable sigma_decay, start with small sigma"""
+use_KNN = False
+KNN_n_neighbors = 3
+KNN_top_n = 10
+n_KNN_subsprings = 50  # number offsprings of every KNN update
 
-use_Softmax=True #weight update method
+use_Softmax = True  # weight update method
 
-use_focus=False #only modify weights of one layer of convu. Changing focus every focus_change_every
-focus_layer=[0,4,8]
-focus_change_every=100
+use_focus = False  # only modify weights of one layer of convu. Changing focus every focus_change_every
+focus_layer = [0, 4, 8]
+focus_change_every = 100
 
-use_pickle=False #load weights
-use_best_weights=False
-pickle_path="/content/drive/MyDrive/Colab Notebooks/Jax_MNist/Logs/19.04.2022_2parallel/best_weight_0.8865.pkl"
-use_father=True
-std_modifier=0.05
-temp=0.05 #weight for softmax
+use_pickle = False  # load weights
+use_best_weights = False
+pickle_path = "/content/drive/MyDrive/Colab Notebooks/Jax_MNist/Logs/19.04.2022_2parallel/best_weight_0.8865.pkl"
+use_father = True
+std_modifier = 0.05
+temp = 0.05  # weight for softmax
 
-file_name="JAX_MNist_2"
+file_name = "JAX_MNist_2"
 
 from math import e
-#main code
-'''Initialize variables'''
-f_idx=0
-focus_layer=focus_layer*100
-rng_MLP=jax.random.PRNGKey(MLP_key)
-results_meta=[]
-best_performer=[0.0,0.0]
-father_key=jax.random.PRNGKey(starting_key)
-best_weights=conv_init(father_key, (batch_size,28,28,1))[1]
-common_start_acc=0
-std_start=std_modifier
 
-'''Start Logging'''
-#pathandstuff()
-#logg_script(file_name, save_path)
-#log_variables()
+# main code
+"""Initialize variables"""
+f_idx = 0
+focus_layer = focus_layer * 100
+rng_MLP = jax.random.PRNGKey(MLP_key)
+results_meta = []
+best_performer = [0.0, 0.0]
+father_key = jax.random.PRNGKey(starting_key)
+best_weights = conv_init(father_key, (batch_size, 28, 28, 1))[1]
+common_start_acc = 0
+std_start = std_modifier
 
-for meta in range (n_metaepochs):
+"""Start Logging"""
+# pathandstuff()
+# logg_script(file_name, save_path)
+# log_variables()
+
+for meta in range(n_metaepochs):
     start_meta = time.time()
 
-    '''Sigma Decay'''
+    """Sigma Decay"""
     if use_sigma_decay:
-        sigma_base=sigma_decay(sigma_start, sigma_goal, n_decay_epochs)
+        sigma_base = sigma_decay(sigma_start, sigma_goal, n_decay_epochs)
         if meta < n_decay_epochs:
-          std_modifier=sigma_start*sigma_base**meta
+            std_modifier = sigma_start * sigma_base**meta
         else:
-          std_modifier=sigma_start*sigma_base**n_decay_epochs
+            std_modifier = sigma_start * sigma_base**n_decay_epochs
 
-    '''Sigma Randomizer'''
+    """Sigma Randomizer"""
     if use_sigma_randomizer:
-      if np.random.uniform(0,1)<explo_rate:
-        std_modifier=np.random.uniform(std_modifier/std_random_modifier,std_modifier*std_random_modifier)
-        print(f"\trandomized std_modifier: {std_modifier:.4f}")
-      else:
-        std_modifier=std_start
+        if np.random.uniform(0, 1) < explo_rate:
+            std_modifier = np.random.uniform(
+                std_modifier / std_random_modifier, std_modifier * std_random_modifier
+            )
+            print(f"\trandomized std_modifier: {std_modifier:.4f}")
+        else:
+            std_modifier = std_start
 
-
-    '''Starting point'''
-    commonweights_loaded=False
+    """Starting point"""
+    commonweights_loaded = False
     if use_paralleltraining:
-      '''Check for better weight'''
-      best_weights_list=os.listdir(parallel_path)
-      if best_weights_list is not None:
-        
-        for weights in best_weights_list[::-1]:
-          if "best_weight" in weights:
-            highest_acc=float(weights.split("best_weight_")[1].split(".pkl")[0])
-            if highest_acc > common_start_acc:
-              commonweights_loaded=True
-              with open(parallel_path+f"/best_weight_{highest_acc:.4f}.pkl", "rb") as input_file:
-                  father_weights = cPickle.load(input_file)
-              logg(f"common weights imported with acc {highest_acc}") 
-              common_start_acc=highest_acc
-              
-              offspring_list=jax_create_offsprings((meta+numpy_seed),n_offsprings, father_weights,std_modifier)
-              if use_father:
-                offspring_list[0]=father_weights
-              best_performer[0]=highest_acc
+        """Check for better weight"""
+        best_weights_list = os.listdir(parallel_path)
+        if best_weights_list is not None:
 
-    elif meta ==0 :
+            for weights in best_weights_list[::-1]:
+                if "best_weight" in weights:
+                    highest_acc = float(
+                        weights.split("best_weight_")[1].split(".pkl")[0]
+                    )
+                    if highest_acc > common_start_acc:
+                        commonweights_loaded = True
+                        with open(
+                            parallel_path + f"/best_weight_{highest_acc:.4f}.pkl", "rb"
+                        ) as input_file:
+                            father_weights = cPickle.load(input_file)
+                        logg(f"common weights imported with acc {highest_acc}")
+                        common_start_acc = highest_acc
+
+                        offspring_list = jax_create_offsprings(
+                            (meta + numpy_seed),
+                            n_offsprings,
+                            father_weights,
+                            std_modifier,
+                        )
+                        if use_father:
+                            offspring_list[0] = father_weights
+                        best_performer[0] = highest_acc
+
+    elif meta == 0:
         if use_pickle:
             with open(pickle_path, "rb") as input_file:
-              father_weights = cPickle.load(input_file)
-              print("pickle weights imported") 
-            offspring_list=jax_create_offsprings((meta+numpy_seed),n_offsprings, father_weights,std_modifier)
+                father_weights = cPickle.load(input_file)
+                print("pickle weights imported")
+            offspring_list = jax_create_offsprings(
+                (meta + numpy_seed), n_offsprings, father_weights, std_modifier
+            )
             if use_father:
-              offspring_list[0]=father_weights
-        
+                offspring_list[0] = father_weights
 
         else:
-          father_weights = conv_init(father_key, (batch_size,28,28,1))
-          father_weights = father_weights[1] ## Weights are actually stored in second element of two value tuple
-          offspring_list=jax_create_offsprings((meta+numpy_seed),n_offsprings, father_weights,std_modifier)
-          if use_father:
-            offspring_list[0]=father_weights
+            father_weights = conv_init(father_key, (batch_size, 28, 28, 1))
+            father_weights = father_weights[
+                1
+            ]  ## Weights are actually stored in second element of two value tuple
+            offspring_list = jax_create_offsprings(
+                (meta + numpy_seed), n_offsprings, father_weights, std_modifier
+            )
+            if use_father:
+                offspring_list[0] = father_weights
 
+    """Weight updates"""
+    if meta >= 1 and not commonweights_loaded:
 
-    
-
-
-
-    '''Weight updates'''      
-    if meta >=1 and not commonweights_loaded:
-
-        '''KNN weight update'''
+        """KNN weight update"""
         if use_KNN:
-          KNN_offlist=KNN_weight_update(result_list_metaepoch, offspring_list)
-          offspring_list=[]
-          if use_father:
-            offspring_list.append(best_weights)
-          for off in KNN_offlist:
-            offspring_list.append(off)
-            offspring_list.extend(jax_create_offsprings((meta+numpy_seed),n_KNN_subsprings, father_weights,std_modifier))
-          
+            KNN_offlist = KNN_weight_update(result_list_metaepoch, offspring_list)
+            offspring_list = []
+            if use_father:
+                offspring_list.append(best_weights)
+            for off in KNN_offlist:
+                offspring_list.append(off)
+                offspring_list.extend(
+                    jax_create_offsprings(
+                        (meta + numpy_seed),
+                        n_KNN_subsprings,
+                        father_weights,
+                        std_modifier,
+                    )
+                )
 
-        '''Softmax Update'''
+        """Softmax Update"""
         if use_Softmax:
-          grand_father=offspring_list[0]
-          father_weights=softmax_offlist(offspring_list,[x[0] for x in result_list_metaepoch],temp)
-          offspring_list=jax_create_offsprings((meta+numpy_seed),n_offsprings, father_weights,std_modifier)
-          if use_father:
-            offspring_list[0]=grand_father
-            offspring_list[1]=best_weights
-            offspring_list[2]=father_weights
-        
-        '''Focus Weight Update'''
+            grand_father = offspring_list[0]
+            father_weights = softmax_offlist(
+                offspring_list, [x[0] for x in result_list_metaepoch], temp
+            )
+            offspring_list = jax_create_offsprings(
+                (meta + numpy_seed), n_offsprings, father_weights, std_modifier
+            )
+            if use_father:
+                offspring_list[0] = grand_father
+                offspring_list[1] = best_weights
+                offspring_list[2] = father_weights
+
+        """Focus Weight Update"""
         if use_focus:
-          grand_father=offspring_list[0]
-          if meta % focus_change_every ==0:
-            f_idx=f_idx+1
-            logg(f"Focus change to layer {focus_layer[f_idx]}")
-          if use_elitist:
-            offspring_list=elitist_performer(result_list_metaepoch, offspring_list)
-          else: 
-            father_weights=softmax_offlist(offspring_list,[x[0] for x in result_list_metaepoch],temp)
-            offspring_list=create_focus_offsprings(n_offsprings, father_weights,std_modifier, focus_layer[f_idx])
-          if use_father:
-            offspring_list[0]=grand_father
-            offspring_list[1]=best_weights
-            offspring_list[2]=father_weights
+            grand_father = offspring_list[0]
+            if meta % focus_change_every == 0:
+                f_idx = f_idx + 1
+                logg(f"Focus change to layer {focus_layer[f_idx]}")
+            if use_elitist:
+                offspring_list = elitist_performer(
+                    result_list_metaepoch, offspring_list
+                )
+            else:
+                father_weights = softmax_offlist(
+                    offspring_list, [x[0] for x in result_list_metaepoch], temp
+                )
+                offspring_list = create_focus_offsprings(
+                    n_offsprings, father_weights, std_modifier, focus_layer[f_idx]
+                )
+            if use_father:
+                offspring_list[0] = grand_father
+                offspring_list[1] = best_weights
+                offspring_list[2] = father_weights
 
         if use_elitist:
-          offspring_list=elitist_performer(result_list_metaepoch, offspring_list)
-          
-    result_list_metaepoch=[]
+            offspring_list = elitist_performer(result_list_metaepoch, offspring_list)
 
-    '''same data for every offspring'''
-    x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=n_offsp_epoch*n_samples,
-                                                          test_size=n_offsp_epoch*n_test,stratify=y,
-                                                          random_state=(starting_key+meta))
-    
-    x_train=x_train.reshape(n_offsp_epoch,int((n_samples/batch_size)),batch_size,28,28,1)
-    y_train=y_train.reshape(n_offsp_epoch,int((n_samples/batch_size)),batch_size)
-    x_test=x_test.reshape(n_offsp_epoch,n_test,28,28,1)
-    y_test=y_test.reshape(n_offsp_epoch,n_test)
-    
-    print("\tLänge Offspring List:",len(offspring_list))
-    #print(f"\tTime overhead: {(time.time()-start_meta):.2f}s")
+    result_list_metaepoch = []
+
+    """same data for every offspring"""
+    x_train, x_test, y_train, y_test = train_test_split(
+        x,
+        y,
+        train_size=n_offsp_epoch * n_samples,
+        test_size=n_offsp_epoch * n_test,
+        stratify=y,
+        random_state=(starting_key + meta),
+    )
+
+    x_train = x_train.reshape(
+        n_offsp_epoch, int((n_samples / batch_size)), batch_size, 28, 28, 1
+    )
+    y_train = y_train.reshape(n_offsp_epoch, int((n_samples / batch_size)), batch_size)
+    x_test = x_test.reshape(n_offsp_epoch, n_test, 28, 28, 1)
+    y_test = y_test.reshape(n_offsp_epoch, n_test)
+
+    print("\tLänge Offspring List:", len(offspring_list))
+    # print(f"\tTime overhead: {(time.time()-start_meta):.2f}s")
 
     for i in range(len(offspring_list)):
 
-      conv_weights=offspring_list[i]
-      result_off=jit_vmap_bootstrapp_offspring_MLP(rng_MLP,conv_weights,x_train,y_train,x_test,y_test)
-      result_off2=[float(jnp.mean(result_off)),float(jnp.std(result_off))]
-      result_list_metaepoch.append(result_off2)
+        conv_weights = offspring_list[i]
+        result_off = jit_vmap_bootstrapp_offspring_MLP(
+            rng_MLP, conv_weights, x_train, y_train, x_test, y_test
+        )
+        result_off2 = [float(jnp.mean(result_off)), float(jnp.std(result_off))]
+        result_list_metaepoch.append(result_off2)
 
+        """Check for best performer"""
+        if result_off2[0] > best_performer[0]:
+            best_performer = result_off2
+            best_weights = conv_weights
+            common_start_acc = result_off2[0]
+            with open(save_path + f"best_weight_{result_off2[0]:.4f}.pkl", "wb") as f:
+                pickle.dump(best_weights, f, pickle.HIGHEST_PROTOCOL)
+                f.close()
+            logg(
+                f"New best performer mean: {best_performer[0]:.4f}, std: {best_performer[1]:.2f}"
+            )
 
-      '''Check for best performer'''
-      if result_off2[0]>best_performer[0]:
-        best_performer=result_off2
-        best_weights=conv_weights
-        common_start_acc=result_off2[0]
-        with open(save_path+f"best_weight_{result_off2[0]:.4f}.pkl", 'wb') as f:
-          pickle.dump(best_weights, f, pickle.HIGHEST_PROTOCOL)
-          f.close()
-        logg(f"New best performer mean: {best_performer[0]:.4f}, std: {best_performer[1]:.2f}")
-      
-    logg("\tMetaepoch mean: {:.4f}, std: {:.2f}".format(np.mean(np.array([x[0] for x in result_list_metaepoch])),np.std(np.array([x[0] for x in result_list_metaepoch]))))
-    logg("\tMetaepoch max performer: {:.4f}, min performer: {:.4f}".format(np.max(np.array([x[0] for x in result_list_metaepoch])),np.min(np.array([x[0] for x in result_list_metaepoch]))))
+    logg(
+        "\tMetaepoch mean: {:.4f}, std: {:.2f}".format(
+            np.mean(np.array([x[0] for x in result_list_metaepoch])),
+            np.std(np.array([x[0] for x in result_list_metaepoch])),
+        )
+    )
+    logg(
+        "\tMetaepoch max performer: {:.4f}, min performer: {:.4f}".format(
+            np.max(np.array([x[0] for x in result_list_metaepoch])),
+            np.min(np.array([x[0] for x in result_list_metaepoch])),
+        )
+    )
     logg("\tTime per metaepoch:{:.1f}s\n".format(time.time() - start_meta))
     results_meta.append(np.mean(np.array(result_list_metaepoch), axis=0))
 
 len(offspring_list[2][0])
 
 """# **Testing**"""
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 """# Archiv"""
